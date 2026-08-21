@@ -89,20 +89,29 @@ msgstr "Ein eigenes Licht/Relais nur für diesen Drucker, das eingeschaltet wird
 msgid "Turn on a light/relay when this printer finishes"
 msgstr "Licht/Relais einschalten, wenn dieser Drucker fertig ist"
 
+msgid "Turn off after (seconds)"
+msgstr "Ausschalten nach (Sekunden)"
+
+msgid "0 = leave it on until the next print starts."
+msgstr "0 = an lassen, bis der nächste Druck startet."
+
 msgid "This Printer's Power Plug"
 msgstr "Steckdose dieses Druckers"
 
-msgid "The smart plug/switch powering this printer's mains. PrintButler subscribes to its state (used by the shared light below) and can switch it off as the last step of Safe Shutdown."
-msgstr "Die Smart-Steckdose/der Schalter, der diesen Drucker mit Strom versorgt. PrintButler abonniert deren Status (wird für das gemeinsame Licht weiter unten genutzt) und kann sie als letzten Schritt des sicheren Herunterfahrens ausschalten."
+msgid "The smart plug/switch powering this printer's mains. PrintButler only reads its state here (used by the Shared Light tab below) - actually cutting power after Safe Shutdown is handled externally, see the Safe Shutdown tab."
+msgstr "Die Smart-Steckdose/der Schalter, der diesen Drucker mit Strom versorgt. PrintButler liest hier nur deren Status (wird für den Tab \"Gemeinsames Licht\" weiter unten genutzt) - das eigentliche Abschalten nach dem sicheren Herunterfahren erfolgt extern, siehe Tab \"Sicheres Herunterfahren\"."
 
-msgid "Track / control this printer's power plug"
-msgstr "Steckdose dieses Druckers überwachen / steuern"
+msgid "Track this printer's power plug state"
+msgstr "Status der Steckdose dieses Druckers überwachen"
 
 msgid "State topic (subscribe)"
 msgstr "Status-Topic (abonnieren)"
 
-msgid "Topic, then the substring that means \"on\" in its payload."
-msgstr "Topic, danach der Teilstring, der im Payload \"an\" bedeutet."
+msgid "\"On\" value"
+msgstr "Wert für \"an\""
+
+msgid "Value, then the JSON field to read it from (leave the field blank for a plain-text payload)."
+msgstr "Wert, danach das JSON-Feld, aus dem er gelesen wird (Feld leer lassen für reinen Text-Payload)."
 
 msgid "Set topic (publish)"
 msgstr "Steuer-Topic (senden)"
@@ -122,20 +131,20 @@ msgstr "Gemeinsames Licht an lassen, solange irgendein überwachter Drucker eing
 msgid "State topic (optional, self-heal)"
 msgstr "Status-Topic (optional, Selbstkorrektur)"
 
-msgid "If set, PrintButler re-asserts \"on\" if something else switches it off while a printer is still running."
-msgstr "Falls gesetzt, schaltet PrintButler erneut auf \"an\", wenn etwas anderes es ausschaltet, während noch ein Drucker läuft."
+msgid "JSON field to read the on/off value from (blank = plain-text payload). If set, PrintButler re-asserts \"on\" if something else switches it off while a printer is still running."
+msgstr "JSON-Feld, aus dem der An/Aus-Wert gelesen wird (leer = reiner Text-Payload). Falls gesetzt, schaltet PrintButler erneut auf \"an\", wenn etwas anderes es ausschaltet, während noch ein Drucker läuft."
 
 msgid "Peer printer topics"
 msgstr "Topics der anderen Drucker"
 
-msgid "One MQTT topic per line (e.g. the other printer's plug state topic), plus the substring meaning \"on\"."
-msgstr "Ein MQTT-Topic pro Zeile (z. B. das Status-Topic der Steckdose des anderen Druckers), plus der Teilstring, der \"an\" bedeutet."
+msgid "One MQTT topic per line, plus the \"on\" value and the JSON field to read it from (blank = plain-text payload). Same format assumed for all peers."
+msgstr "Ein MQTT-Topic pro Zeile, plus dem \"an\"-Wert und dem JSON-Feld, aus dem er gelesen wird (leer = reiner Text-Payload). Für alle Peers wird das gleiche Format angenommen."
 
-msgid "Runs a shutdown command on this OctoPrint host, waits for it to power down, then cuts mains power via the printer plug (Printer Plug tab) over MQTT."
-msgstr "Führt einen Shutdown-Befehl auf diesem OctoPrint-Host aus, wartet bis er heruntergefahren ist, und trennt dann über MQTT die Stromversorgung an der Drucker-Steckdose (Tab \"Drucker-Steckdose\")."
+msgid "This host cannot cut its own mains power reliably - once the shutdown command runs, OctoPrint (and MQTT) will die before it can finish. Instead, PrintButler publishes a trigger topic BEFORE shutting down; wire up a Home Assistant automation (or similar) that watches this topic and cuts power to the printer plug once it has confirmed the host is actually down."
+msgstr "Dieser Host kann seine eigene Stromversorgung nicht zuverlässig selbst trennen - sobald der Shutdown-Befehl läuft, sterben OctoPrint (und MQTT) bevor das abgeschlossen werden kann. Stattdessen veröffentlicht PrintButler VOR dem Herunterfahren ein Trigger-Topic; richte eine Home-Assistant-Automatisierung (oder ähnliches) ein, die dieses Topic beobachtet und die Steckdose erst dann trennt, wenn bestätigt ist, dass der Host wirklich heruntergefahren ist."
 
-msgid "Enable the Safe Shutdown button"
-msgstr "Button für sicheres Herunterfahren aktivieren"
+msgid "Enable Safe Shutdown"
+msgstr "Sicheres Herunterfahren aktivieren"
 
 msgid "Shutdown command"
 msgstr "Shutdown-Befehl"
@@ -143,17 +152,56 @@ msgstr "Shutdown-Befehl"
 msgid "Runs on the OctoPrint host. Needs passwordless sudo for shutdown if using \"sudo\"."
 msgstr "Wird auf dem OctoPrint-Host ausgeführt. Benötigt passwortloses sudo für shutdown, falls \"sudo\" verwendet wird."
 
-msgid "Power-off delay (seconds)"
-msgstr "Verzögerung bis Stromabschaltung (Sekunden)"
+msgid "Trigger topic (publish)"
+msgstr "Trigger-Topic (senden)"
 
-msgid "How long to wait for the host to fully power down before cutting mains power."
-msgstr "Wie lange gewartet wird, bis der Host vollständig heruntergefahren ist, bevor die Stromversorgung getrennt wird."
+msgid "Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely."
+msgstr "Wird direkt vor dem Shutdown-Befehl gesendet. Richte eine Home-Assistant-Automatisierung auf dieses Topic aus, um die Stromversorgung sicher zu trennen."
+
+msgid "Trigger payload"
+msgstr "Trigger-Payload"
+
+msgid "Settle delay (seconds)"
+msgstr "Wartezeit vor dem Herunterfahren (Sekunden)"
+
+msgid "Wait this long after publishing the trigger before running the shutdown command, so the message has time to actually leave the host."
+msgstr "Wie lange nach dem Senden des Trigger-Topics gewartet wird, bevor der Shutdown-Befehl ausgeführt wird, damit die Nachricht den Host noch verlassen kann."
 
 msgid "Shutdown Printer Now"
 msgstr "Drucker jetzt herunterfahren"
 
 msgid "Shutdown in progress..."
 msgstr "Herunterfahren läuft ..."
+
+msgid "Auto-Shutdown When Cool"
+msgstr "Auto-Shutdown nach Abkühlen"
+
+msgid "After a print finishes, watch the bed and nozzle temperature; once both stay below their thresholds continuously for the confirm time (and the printer isn't printing), trigger Safe Shutdown automatically - same as pressing the button above."
+msgstr "Nach Druckende werden Bett- und Düsentemperatur überwacht; sobald beide durchgehend für die Bestätigungszeit unter ihrem Schwellwert bleiben (und der Drucker nicht druckt), wird automatisch sicheres Herunterfahren ausgelöst - genau wie beim Button oben."
+
+msgid "Enable auto-shutdown when cool"
+msgstr "Auto-Shutdown nach Abkühlen aktivieren"
+
+msgid "Bed / Nozzle threshold (°C)"
+msgstr "Bett- / Düsen-Schwellwert (°C)"
+
+msgid "Confirm for (seconds)"
+msgstr "Bestätigen für (Sekunden)"
+
+msgid "Both temperatures must stay at or below their threshold for this long before shutdown fires."
+msgstr "Beide Temperaturen müssen so lange auf oder unter ihrem Schwellwert bleiben, bevor das Herunterfahren ausgelöst wird."
+
+msgid "Controlled live by the power button in the top navigation bar - armed by default on every OctoPrint start; click it to disarm for the current session (e.g. to keep the printer on after this print)."
+msgstr "Wird live über den Power-Button in der oberen Navigationsleiste gesteuert - bei jedem OctoPrint-Start standardmäßig aktiv (armed); anklicken, um es für die aktuelle Sitzung zu deaktivieren (z. B. um den Drucker nach diesem Druck an zu lassen)."
+
+msgid "Currently:"
+msgstr "Aktuell:"
+
+msgid "Armed"
+msgstr "Aktiv"
+
+msgid "Disarmed"
+msgstr "Deaktiviert"
 
 msgid "Live Status"
 msgstr "Live-Status"
@@ -169,6 +217,9 @@ msgstr "Sollzustand gemeinsames Licht"
 
 msgid "Quiet hours active now"
 msgstr "Ruhezeit gerade aktiv"
+
+msgid "Auto-shutdown-when-cool"
+msgstr "Auto-Shutdown nach Abkühlen"
 
 msgid "Refresh"
 msgstr "Aktualisieren"
@@ -214,3 +265,9 @@ msgstr "Herunterfahren konnte nicht gestartet werden."
 
 msgid "Request failed."
 msgstr "Anfrage fehlgeschlagen."
+
+msgid "PrintButler: auto-shutdown-when-cool is armed (click to disarm)"
+msgstr "PrintButler: Auto-Shutdown nach Abkühlen ist aktiv (klicken zum Deaktivieren)"
+
+msgid "PrintButler: auto-shutdown-when-cool is DISARMED (click to arm)"
+msgstr "PrintButler: Auto-Shutdown nach Abkühlen ist DEAKTIVIERT (klicken zum Aktivieren)"

@@ -1,0 +1,9 @@
+{# OctoPrint-PrintButler - printbutler_navbar.jinja2 #}
+<li>
+    <a href="#" id="navbar_plugin_printbutler"
+       data-bind="click: toggleArmed,
+                  attr: {title: armedTooltip()},
+                  css: {'printbutler-navbar-armed': armed(), 'printbutler-navbar-disarmed': !armed()}">
+        <i class="fa fa-power-off"></i>
+    </a>
+</li>
