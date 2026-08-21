@@ -73,8 +73,8 @@ class PrintButlerPlugin(
             # Per-printer finish indicator light
             finish_light_enabled=False,
             finish_light_topic="",
-            finish_light_payload_on='{"state": "ON"}',
-            finish_light_payload_off='{"state": "OFF"}',
+            finish_light_payload_on="ON",
+            finish_light_payload_off="OFF",
             finish_light_qos=0,
             finish_light_retain=False,
             finish_light_turn_off_after=0,  # 0 = leave on until next print starts
@@ -90,8 +90,8 @@ class PrintButlerPlugin(
             # Shared work light (stays on while this OR any peer printer is on)
             shared_light_enabled=False,
             shared_light_set_topic="",
-            shared_light_payload_on='{"state": "ON"}',
-            shared_light_payload_off='{"state": "OFF"}',
+            shared_light_payload_on="ON",
+            shared_light_payload_off="OFF",
             shared_light_qos=0,
             shared_light_retain=False,
             shared_light_state_topic="",
