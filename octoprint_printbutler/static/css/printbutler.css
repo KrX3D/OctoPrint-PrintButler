@@ -84,10 +84,11 @@
 
 #navbar_plugin_printbutler {
     cursor: pointer;
+    margin-right: 10px;
 }
-#navbar_plugin_printbutler.printbutler-navbar-armed i.fa-power-off {
-    color: #5cb85c;
+#navbar_plugin_printbutler.printbutler-navbar-armed i.fa-snowflake {
+    color: #5bc0de;
 }
-#navbar_plugin_printbutler.printbutler-navbar-disarmed i.fa-power-off {
+#navbar_plugin_printbutler.printbutler-navbar-disarmed i.fa-snowflake {
     color: #999;
 }

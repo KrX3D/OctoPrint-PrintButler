@@ -64,6 +64,16 @@ $(function () {
             return boolText(self.quietHoursActive(), tr("Yes"), tr("No"), tr("Unknown"));
         });
 
+        self.autoShutdownFeatureEnabled = ko.computed(function () {
+            try {
+                var shutdownOn = self.settings && self.settings.shutdown_enabled();
+                var autoOn = self.settings && self.settings.auto_shutdown_enabled();
+                return (shutdownOn === true || shutdownOn === "true")
+                    && (autoOn === true || autoOn === "true");
+            }
+            catch (e) { return false; }
+        });
+
         self.armedTooltip = ko.computed(function () {
             return self.armed()
                 ? tr("PrintButler: auto-shutdown-when-cool is armed (click to disarm)")

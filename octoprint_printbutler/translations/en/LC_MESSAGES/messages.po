@@ -116,6 +116,9 @@ msgstr "Value, then the JSON field to read it from (leave the field blank for a 
 msgid "Set topic (publish)"
 msgstr "Set topic (publish)"
 
+msgid "Plain text for most devices (WLED, Tasmota, HA-style switches). Some Zigbee2MQTT converters need JSON instead, e.g. {\"state\": \"ON\"}."
+msgstr "Plain text for most devices (WLED, Tasmota, HA-style switches). Some Zigbee2MQTT converters need JSON instead, e.g. {\"state\": \"ON\"}."
+
 msgid "Set payload (on / off)"
 msgstr "Set payload (on / off)"
 

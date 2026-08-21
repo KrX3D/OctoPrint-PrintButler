@@ -145,10 +145,11 @@
                 <div class="controls">
                     <input type="text" style="width:150px; display:inline-block;"
                            data-bind="value: settings.finish_light_payload_on, enable: settings.finish_light_enabled"
-                           placeholder='{"state": "ON"}'>
+                           placeholder="ON">
                     <input type="text" style="width:150px; display:inline-block;"
                            data-bind="value: settings.finish_light_payload_off, enable: settings.finish_light_enabled"
-                           placeholder='{"state": "OFF"}'>
+                           placeholder="OFF">
+                    <span class="help-inline muted">{{ _("Plain text for most devices (WLED, Tasmota, HA-style switches). Some Zigbee2MQTT converters need JSON instead, e.g. {\"state\": \"ON\"}.") }}</span>
                 </div>
             </div>
 
@@ -247,10 +248,11 @@
                 <div class="controls">
                     <input type="text" style="width:150px; display:inline-block;"
                            data-bind="value: settings.shared_light_payload_on, enable: settings.shared_light_enabled"
-                           placeholder='{"state": "ON"}'>
+                           placeholder="ON">
                     <input type="text" style="width:150px; display:inline-block;"
                            data-bind="value: settings.shared_light_payload_off, enable: settings.shared_light_enabled"
-                           placeholder='{"state": "OFF"}'>
+                           placeholder="OFF">
+                    <span class="help-inline muted">{{ _("Plain text for most devices (WLED, Tasmota, HA-style switches). Some Zigbee2MQTT converters need JSON instead, e.g. {\"state\": \"ON\"}.") }}</span>
                 </div>
             </div>
 
