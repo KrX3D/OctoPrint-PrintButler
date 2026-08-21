@@ -179,8 +179,11 @@ msgstr "Log leeren"
 msgid "MQTT connected"
 msgstr "MQTT verbunden"
 
-msgid "MQTT unavailable"
-msgstr "MQTT nicht verfügbar"
+msgid "MQTT plugin not found"
+msgstr "MQTT-Plugin nicht gefunden"
+
+msgid "MQTT not connected"
+msgstr "MQTT nicht verbunden"
 
 msgid "Unknown"
 msgstr "Unbekannt"

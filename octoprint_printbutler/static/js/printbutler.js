@@ -22,7 +22,8 @@ $(function () {
         self.loginStateViewModel = parameters[1];
 
         self.pluginVersion   = ko.observable("?");
-        self.mqttAvailable   = ko.observable(null);
+        self.mqttHelperPresent = ko.observable(null);
+        self.mqttConnected     = ko.observable(null);
         self.plugState       = ko.observable(null);
         self.sharedLightDesired = ko.observable(null);
         self.quietHoursActive   = ko.observable(null);
@@ -37,14 +38,17 @@ $(function () {
         // -- Computed display helpers -------------------------------------
 
         self.mqttBadgeClass = ko.computed(function () {
-            var v = self.mqttAvailable();
-            if (v === true)  { return "printbutler-status-success"; }
-            if (v === false) { return "printbutler-status-failed"; }
+            if (self.mqttHelperPresent() === false) { return "printbutler-status-failed"; }
+            if (self.mqttConnected() === true)      { return "printbutler-status-success"; }
+            if (self.mqttConnected() === false)     { return "printbutler-status-failed"; }
             return "printbutler-status-never";
         });
 
         self.mqttBadgeText = ko.computed(function () {
-            return boolText(self.mqttAvailable(), tr("MQTT connected"), tr("MQTT unavailable"), tr("Unknown"));
+            if (self.mqttHelperPresent() === false) { return tr("MQTT plugin not found"); }
+            if (self.mqttConnected() === true)      { return tr("MQTT connected"); }
+            if (self.mqttConnected() === false)     { return tr("MQTT not connected"); }
+            return tr("Unknown");
         });
 
         self.plugStateText = ko.computed(function () {
@@ -87,7 +91,8 @@ $(function () {
             OctoPrint.get("api/plugin/printbutler")
                 .done(function (data) {
                     self.pluginVersion(data.plugin_version || "?");
-                    self.mqttAvailable(data.mqtt_available === true);
+                    self.mqttHelperPresent(data.mqtt_helper_present === true);
+                    self.mqttConnected(data.mqtt_connected === true);
                     self.plugState(data.plug_state);
                     self.sharedLightDesired(data.shared_light_desired);
                     self.quietHoursActive(data.quiet_hours_active === true);

@@ -144,12 +144,14 @@ class PrintButlerPlugin(
         )
         if not self._mqtt_helpers or "mqtt_publish" not in self._mqtt_helpers:
             self._log(
-                "MQTT helper not found. Install/enable OctoPrint's built-in 'MQTT' "
+                "MQTT plugin not found. Install/enable OctoPrint's built-in 'MQTT' "
                 "plugin and configure a broker connection - PrintButler reuses it.",
                 "WARNING",
             )
         else:
-            self._log("MQTT helper found, wiring up subscriptions.")
+            self._log(
+                "MQTT plugin found, broker connected={}.".format(self._check_mqtt_connected())
+            )
             self._rewire_mqtt()
 
     # -- EventHandlerPlugin ------------------------------------------------
@@ -312,6 +314,24 @@ class PrintButlerPlugin(
         )
         self._mqtt_publish(topic, payload, qos=qos, retain=retain)
 
+    def _check_mqtt_connected(self):
+        """
+        The MQTT plugin exposes no public "am I connected" helper, only
+        mqtt_publish(). With allow_queueing=False it returns False immediately
+        if the broker connection is down, so a throwaway non-retained publish
+        doubles as a live connectivity probe without touching the other
+        plugin's private state.
+        """
+        if not self._mqtt_helpers or "mqtt_publish" not in self._mqtt_helpers:
+            return False
+        publish = self._mqtt_helpers["mqtt_publish"]
+        try:
+            return bool(publish(
+                "printbutler/ping", "1", retained=False, qos=0, allow_queueing=False
+            ))
+        except Exception:
+            return False
+
     @staticmethod
     def _payload_is_on(raw_payload, match_str):
         try:
@@ -424,11 +444,13 @@ class PrintButlerPlugin(
         return flask.abort(400)
 
     def on_api_get(self, request):
+        mqtt_helper_present = bool(
+            self._mqtt_helpers and "mqtt_publish" in self._mqtt_helpers
+        )
         return flask.jsonify(dict(
             plugin_version=self._plugin_version,
-            mqtt_available=bool(
-                self._mqtt_helpers and "mqtt_publish" in self._mqtt_helpers
-            ),
+            mqtt_helper_present=mqtt_helper_present,
+            mqtt_connected=self._check_mqtt_connected() if mqtt_helper_present else False,
             plug_state=self._plug_state,
             shared_light_desired=self._shared_light_desired,
             peer_states=self._peer_states,
