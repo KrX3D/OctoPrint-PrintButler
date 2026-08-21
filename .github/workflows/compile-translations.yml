@@ -1,0 +1,51 @@
+name: Compile gettext catalogs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "octoprint_printbutler/translations/**/*.po"
+      - ".github/workflows/compile-translations.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install gettext
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext
+
+      - name: Compile .po to .mo
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' po; do
+            mo="${po%.po}.mo"
+            msgfmt "$po" -o "$mo"
+            echo "Compiled $po -> $mo"
+          done < <(find octoprint_printbutler/translations -type f -name "*.po" -print0)
+
+      - name: Commit compiled catalogs
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(i18n): compile gettext catalogs (.mo)"
+          file_pattern: "octoprint_printbutler/translations/**/*.mo"
+          commit_user_name: github-actions[bot]
+          commit_user_email: github-actions[bot]@users.noreply.github.com
+
+      - name: Upload compiled catalogs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-mo-catalogs
+          path: octoprint_printbutler/translations/**/*.mo
+          if-no-files-found: error

@@ -1,0 +1,418 @@
+{# OctoPrint-PrintButler - printbutler_settings.jinja2 #}
+
+<div id="settings_plugin_printbutler">
+
+    <div class="printbutler-master-toggle">
+        <input type="checkbox" id="printbutler_enabled"
+               data-bind="checked: settings.enabled">
+        <label for="printbutler_enabled">{{ _("Enable PrintButler") }}</label>
+        <span class="muted" style="font-size:11px; font-weight:normal;">
+            {{ _("Version:") }} <span data-bind="text: pluginVersion"></span>
+        </span>
+        <span class="printbutler-mqtt-badge" data-bind="css: mqttBadgeClass, text: mqttBadgeText"></span>
+    </div>
+
+    <ul class="nav nav-tabs" id="printbutler_tabs">
+        <li class="active"><a href="#printbutler_tab_finish"  data-toggle="tab">{{ _("Print Finished") }}</a></li>
+        <li><a href="#printbutler_tab_light"  data-toggle="tab">{{ _("Finish Light") }}</a></li>
+        <li><a href="#printbutler_tab_plug"   data-toggle="tab">{{ _("Printer Plug") }}</a></li>
+        <li><a href="#printbutler_tab_shared" data-toggle="tab">{{ _("Shared Light") }}</a></li>
+        <li><a href="#printbutler_tab_shutdown" data-toggle="tab">{{ _("Safe Shutdown") }}</a></li>
+        <li><a href="#printbutler_tab_status" data-toggle="tab"
+               data-bind="click: refreshStatus">{{ _("Status / Log") }}</a></li>
+    </ul>
+
+    <div class="tab-content" style="padding-top:14px;">
+
+        <!-- ============================== Print Finished ============================== -->
+        <div class="tab-pane active" id="printbutler_tab_finish">
+            <p class="printbutler-section-heading">{{ _("Print Finished Notification") }}</p>
+            <p class="muted">
+                {{ _("Fires once, on OctoPrint's own \"print done\" event - no polling or MQTT progress tracking needed. Typically used to trigger a WLED effect, light flash, or any other MQTT-driven notification.") }}
+            </p>
+
+            <div class="control-group">
+                <div class="controls">
+                    <label class="checkbox">
+                        <input type="checkbox" data-bind="checked: settings.finish_enabled">
+                        {{ _("Publish an MQTT notification when a print finishes") }}
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Topic") }}</label>
+                <div class="controls">
+                    <input type="text" class="input-block-level"
+                           data-bind="value: settings.finish_topic, enable: settings.finish_enabled"
+                           placeholder="wled/all/3dPrinterFinished">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Payload (on / off)") }}</label>
+                <div class="controls">
+                    <input type="text" style="width:150px; display:inline-block;"
+                           data-bind="value: settings.finish_payload_on, enable: settings.finish_enabled"
+                           placeholder="true">
+                    <input type="text" style="width:150px; display:inline-block;"
+                           data-bind="value: settings.finish_payload_off, enable: settings.finish_enabled"
+                           placeholder="false">
+                    <span class="help-inline muted">{{ _("Payload sent, then reverted after the delay below.") }}</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("QoS / Retain") }}</label>
+                <div class="controls">
+                    <select style="width:70px; display:inline-block;"
+                            data-bind="value: settings.finish_qos, enable: settings.finish_enabled">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                    </select>
+                    <label class="checkbox" style="display:inline-block; margin-left:14px;">
+                        <input type="checkbox" data-bind="checked: settings.finish_retain, enable: settings.finish_enabled">
+                        {{ _("Retain") }}
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Revert after (seconds)") }}</label>
+                <div class="controls">
+                    <input type="number" min="0" style="width:80px;"
+                           data-bind="value: settings.finish_revert_after, enable: settings.finish_enabled">
+                    <span class="help-inline muted">{{ _("0 = never revert, stays on the \"on\" payload.") }}</span>
+                </div>
+            </div>
+
+            <hr style="margin:14px 0 10px;">
+            <p class="printbutler-section-heading">{{ _("Quiet Hours") }}</p>
+            <p class="muted">
+                {{ _("During this window, the finish notification, the finish light, and the shared-light-on-finish action are all suppressed. Plug-follows-light control below is unaffected.") }}
+            </p>
+
+            <div class="control-group">
+                <div class="controls">
+                    <label class="checkbox">
+                        <input type="checkbox" data-bind="checked: settings.quiet_hours_enabled">
+                        {{ _("Enable quiet hours") }}
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("From / To") }}</label>
+                <div class="controls">
+                    <input type="time" style="width:110px;"
+                           data-bind="value: settings.quiet_hours_start, enable: settings.quiet_hours_enabled">
+                    <span>&ndash;</span>
+                    <input type="time" style="width:110px;"
+                           data-bind="value: settings.quiet_hours_end, enable: settings.quiet_hours_enabled">
+                    <span class="help-inline muted">{{ _("Can cross midnight, e.g. 22:00 → 10:00.") }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================== Finish Light ============================== -->
+        <div class="tab-pane" id="printbutler_tab_light">
+            <p class="printbutler-section-heading">{{ _("Per-Printer Finish Indicator Light") }}</p>
+            <p class="muted">
+                {{ _("A dedicated light/relay for this printer only, turned on when this printer finishes a print.") }}
+            </p>
+
+            <div class="control-group">
+                <div class="controls">
+                    <label class="checkbox">
+                        <input type="checkbox" data-bind="checked: settings.finish_light_enabled">
+                        {{ _("Turn on a light/relay when this printer finishes") }}
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Topic") }}</label>
+                <div class="controls">
+                    <input type="text" class="input-block-level"
+                           data-bind="value: settings.finish_light_topic, enable: settings.finish_light_enabled"
+                           placeholder="zigbee2mqtt/3d_drucker_licht_relay_1/set">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Payload (on / off)") }}</label>
+                <div class="controls">
+                    <input type="text" style="width:150px; display:inline-block;"
+                           data-bind="value: settings.finish_light_payload_on, enable: settings.finish_light_enabled"
+                           placeholder="ON">
+                    <input type="text" style="width:150px; display:inline-block;"
+                           data-bind="value: settings.finish_light_payload_off, enable: settings.finish_light_enabled"
+                           placeholder="OFF">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("QoS / Retain") }}</label>
+                <div class="controls">
+                    <select style="width:70px; display:inline-block;"
+                            data-bind="value: settings.finish_light_qos, enable: settings.finish_light_enabled">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                    </select>
+                    <label class="checkbox" style="display:inline-block; margin-left:14px;">
+                        <input type="checkbox" data-bind="checked: settings.finish_light_retain, enable: settings.finish_light_enabled">
+                        {{ _("Retain") }}
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Turn off after (seconds)") }}</label>
+                <div class="controls">
+                    <input type="number" min="0" style="width:80px;"
+                           data-bind="value: settings.finish_light_turn_off_after, enable: settings.finish_light_enabled">
+                    <span class="help-inline muted">{{ _("0 = leave it on until the next print starts.") }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================== Printer Plug ============================== -->
+        <div class="tab-pane" id="printbutler_tab_plug">
+            <p class="printbutler-section-heading">{{ _("This Printer's Power Plug") }}</p>
+            <p class="muted">
+                {{ _("The smart plug/switch powering this printer's mains. PrintButler subscribes to its state (used by the shared light below) and can switch it off as the last step of Safe Shutdown.") }}
+            </p>
+
+            <div class="control-group">
+                <div class="controls">
+                    <label class="checkbox">
+                        <input type="checkbox" data-bind="checked: settings.plug_enabled">
+                        {{ _("Track / control this printer's power plug") }}
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("State topic (subscribe)") }}</label>
+                <div class="controls">
+                    <input type="text" class="input-block-level"
+                           data-bind="value: settings.plug_state_topic, enable: settings.plug_enabled"
+                           placeholder="zigbee2mqtt/prusa_links_plug">
+                    <input type="text" style="width:150px;"
+                           data-bind="value: settings.plug_state_payload_on, enable: settings.plug_enabled"
+                           placeholder="ON">
+                    <span class="help-inline muted">{{ _("Topic, then the substring that means \"on\" in its payload.") }}</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Set topic (publish)") }}</label>
+                <div class="controls">
+                    <input type="text" class="input-block-level"
+                           data-bind="value: settings.plug_set_topic, enable: settings.plug_enabled"
+                           placeholder="zigbee2mqtt/prusa_links_plug/set">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Set payload (on / off)") }}</label>
+                <div class="controls">
+                    <input type="text" style="width:150px; display:inline-block;"
+                           data-bind="value: settings.plug_set_payload_on, enable: settings.plug_enabled"
+                           placeholder="ON">
+                    <input type="text" style="width:150px; display:inline-block;"
+                           data-bind="value: settings.plug_set_payload_off, enable: settings.plug_enabled"
+                           placeholder="OFF">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("QoS / Retain") }}</label>
+                <div class="controls">
+                    <select style="width:70px; display:inline-block;"
+                            data-bind="value: settings.plug_qos, enable: settings.plug_enabled">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                    </select>
+                    <label class="checkbox" style="display:inline-block; margin-left:14px;">
+                        <input type="checkbox" data-bind="checked: settings.plug_retain, enable: settings.plug_enabled">
+                        {{ _("Retain") }}
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================== Shared Light ============================== -->
+        <div class="tab-pane" id="printbutler_tab_shared">
+            <p class="printbutler-section-heading">{{ _("Shared Work Light") }}</p>
+            <p class="muted">
+                {{ _("A light/relay shared across multiple printers, kept on as long as THIS printer's plug (above) OR any peer printer's topic reports \"on\". Each PrintButler instance runs this independently - list the other printers' plug state topics as peers.") }}
+            </p>
+
+            <div class="control-group">
+                <div class="controls">
+                    <label class="checkbox">
+                        <input type="checkbox" data-bind="checked: settings.shared_light_enabled">
+                        {{ _("Keep the shared light on while any tracked printer is powered") }}
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Set topic (publish)") }}</label>
+                <div class="controls">
+                    <input type="text" class="input-block-level"
+                           data-bind="value: settings.shared_light_set_topic, enable: settings.shared_light_enabled"
+                           placeholder="zigbee2mqtt/3d_drucker_netzteil/set">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Set payload (on / off)") }}</label>
+                <div class="controls">
+                    <input type="text" style="width:150px; display:inline-block;"
+                           data-bind="value: settings.shared_light_payload_on, enable: settings.shared_light_enabled"
+                           placeholder="ON">
+                    <input type="text" style="width:150px; display:inline-block;"
+                           data-bind="value: settings.shared_light_payload_off, enable: settings.shared_light_enabled"
+                           placeholder="OFF">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("QoS / Retain") }}</label>
+                <div class="controls">
+                    <select style="width:70px; display:inline-block;"
+                            data-bind="value: settings.shared_light_qos, enable: settings.shared_light_enabled">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                    </select>
+                    <label class="checkbox" style="display:inline-block; margin-left:14px;">
+                        <input type="checkbox" data-bind="checked: settings.shared_light_retain, enable: settings.shared_light_enabled">
+                        {{ _("Retain") }}
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("State topic (optional, self-heal)") }}</label>
+                <div class="controls">
+                    <input type="text" class="input-block-level"
+                           data-bind="value: settings.shared_light_state_topic, enable: settings.shared_light_enabled"
+                           placeholder="zigbee2mqtt/3d_drucker_netzteil">
+                    <span class="help-inline muted">{{ _("If set, PrintButler re-asserts \"on\" if something else switches it off while a printer is still running.") }}</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Peer printer topics") }}</label>
+                <div class="controls">
+                    <textarea rows="4" class="input-block-level"
+                              data-bind="value: settings.shared_light_peer_topics, enable: settings.shared_light_enabled"
+                              placeholder="zigbee2mqtt/prusa_rechts_plug"></textarea>
+                    <input type="text" style="width:150px;"
+                           data-bind="value: settings.shared_light_peer_payload_on, enable: settings.shared_light_enabled"
+                           placeholder="ON">
+                    <span class="help-inline muted">{{ _("One MQTT topic per line (e.g. the other printer's plug state topic), plus the substring meaning \"on\".") }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================== Safe Shutdown ============================== -->
+        <div class="tab-pane" id="printbutler_tab_shutdown">
+            <p class="printbutler-section-heading">{{ _("Safe Shutdown") }}</p>
+            <p class="muted">
+                {{ _("Runs a shutdown command on this OctoPrint host, waits for it to power down, then cuts mains power via the printer plug (Printer Plug tab) over MQTT.") }}
+            </p>
+
+            <div class="control-group">
+                <div class="controls">
+                    <label class="checkbox">
+                        <input type="checkbox" data-bind="checked: settings.shutdown_enabled">
+                        {{ _("Enable the Safe Shutdown button") }}
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Shutdown command") }}</label>
+                <div class="controls">
+                    <input type="text" class="input-block-level"
+                           data-bind="value: settings.shutdown_command, enable: settings.shutdown_enabled"
+                           placeholder="sudo shutdown -h now">
+                    <span class="help-inline muted">{{ _("Runs on the OctoPrint host. Needs passwordless sudo for shutdown if using \"sudo\".") }}</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Power-off delay (seconds)") }}</label>
+                <div class="controls">
+                    <input type="number" min="0" style="width:80px;"
+                           data-bind="value: settings.shutdown_plug_off_delay, enable: settings.shutdown_enabled">
+                    <span class="help-inline muted">{{ _("How long to wait for the host to fully power down before cutting mains power.") }}</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="controls">
+                    <button class="btn btn-danger"
+                            data-bind="click: shutdownNow, enable: settings.shutdown_enabled() && !shutdownBusy(), css: {disabled: shutdownBusy}">
+                        <i class="fa fa-power-off"></i> {{ _("Shutdown Printer Now") }}
+                    </button>
+                    <span class="printbutler-shutdown-result" data-bind="visible: shutdownBusy">
+                        {{ _("Shutdown in progress...") }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================== Status / Log ============================== -->
+        <div class="tab-pane" id="printbutler_tab_status">
+            <p class="printbutler-section-heading">{{ _("Live Status") }}</p>
+
+            <table class="table table-condensed" style="width:auto;">
+                <tbody>
+                    <tr>
+                        <td>{{ _("MQTT helper") }}</td>
+                        <td><span data-bind="css: mqttBadgeClass, text: mqttBadgeText" class="printbutler-status-badge"></span></td>
+                    </tr>
+                    <tr>
+                        <td>{{ _("This printer's plug") }}</td>
+                        <td data-bind="text: plugStateText"></td>
+                    </tr>
+                    <tr>
+                        <td>{{ _("Shared light desired state") }}</td>
+                        <td data-bind="text: sharedLightText"></td>
+                    </tr>
+                    <tr>
+                        <td>{{ _("Quiet hours active now") }}</td>
+                        <td data-bind="text: quietHoursText"></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="control-group">
+                <div class="controls">
+                    <button class="btn btn-small" data-bind="click: refreshStatus">
+                        <i class="fa fa-refresh"></i> {{ _("Refresh") }}
+                    </button>
+                    <button class="btn btn-small" data-bind="click: clearLogs">
+                        <i class="fa fa-trash"></i> {{ _("Clear log") }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- ko if: logs().length > 0 -->
+            <div id="printbutler_log_area" class="printbutler-log"
+                 data-bind="foreach: logs">
+                <div class="log-line" data-bind="text: $data, css: $parent.logLineClass($data)"></div>
+            </div>
+            <!-- /ko -->
+        </div>
+
+    </div>
+</div>

@@ -1,0 +1,213 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: OctoPrint-PrintButler\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-21 00:00+0000\n"
+"PO-Revision-Date: 2026-08-21 00:00+0000\n"
+"Last-Translator: KrX3D\n"
+"Language-Team: English\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Enable PrintButler"
+msgstr "Enable PrintButler"
+
+msgid "Version:"
+msgstr "Version:"
+
+msgid "Print Finished"
+msgstr "Print Finished"
+
+msgid "Finish Light"
+msgstr "Finish Light"
+
+msgid "Printer Plug"
+msgstr "Printer Plug"
+
+msgid "Shared Light"
+msgstr "Shared Light"
+
+msgid "Safe Shutdown"
+msgstr "Safe Shutdown"
+
+msgid "Status / Log"
+msgstr "Status / Log"
+
+msgid "Print Finished Notification"
+msgstr "Print Finished Notification"
+
+msgid "Fires once, on OctoPrint's own \"print done\" event - no polling or MQTT progress tracking needed. Typically used to trigger a WLED effect, light flash, or any other MQTT-driven notification."
+msgstr "Fires once, on OctoPrint's own \"print done\" event - no polling or MQTT progress tracking needed. Typically used to trigger a WLED effect, light flash, or any other MQTT-driven notification."
+
+msgid "Publish an MQTT notification when a print finishes"
+msgstr "Publish an MQTT notification when a print finishes"
+
+msgid "Topic"
+msgstr "Topic"
+
+msgid "Payload (on / off)"
+msgstr "Payload (on / off)"
+
+msgid "Payload sent, then reverted after the delay below."
+msgstr "Payload sent, then reverted after the delay below."
+
+msgid "QoS / Retain"
+msgstr "QoS / Retain"
+
+msgid "Retain"
+msgstr "Retain"
+
+msgid "Revert after (seconds)"
+msgstr "Revert after (seconds)"
+
+msgid "0 = never revert, stays on the \"on\" payload."
+msgstr "0 = never revert, stays on the \"on\" payload."
+
+msgid "Quiet Hours"
+msgstr "Quiet Hours"
+
+msgid "During this window, the finish notification, the finish light, and the shared-light-on-finish action are all suppressed. Plug-follows-light control below is unaffected."
+msgstr "During this window, the finish notification, the finish light, and the shared-light-on-finish action are all suppressed. Plug-follows-light control below is unaffected."
+
+msgid "Enable quiet hours"
+msgstr "Enable quiet hours"
+
+msgid "From / To"
+msgstr "From / To"
+
+msgid "Can cross midnight, e.g. 22:00 → 10:00."
+msgstr "Can cross midnight, e.g. 22:00 → 10:00."
+
+msgid "Per-Printer Finish Indicator Light"
+msgstr "Per-Printer Finish Indicator Light"
+
+msgid "A dedicated light/relay for this printer only, turned on when this printer finishes a print."
+msgstr "A dedicated light/relay for this printer only, turned on when this printer finishes a print."
+
+msgid "Turn on a light/relay when this printer finishes"
+msgstr "Turn on a light/relay when this printer finishes"
+
+msgid "This Printer's Power Plug"
+msgstr "This Printer's Power Plug"
+
+msgid "The smart plug/switch powering this printer's mains. PrintButler subscribes to its state (used by the shared light below) and can switch it off as the last step of Safe Shutdown."
+msgstr "The smart plug/switch powering this printer's mains. PrintButler subscribes to its state (used by the shared light below) and can switch it off as the last step of Safe Shutdown."
+
+msgid "Track / control this printer's power plug"
+msgstr "Track / control this printer's power plug"
+
+msgid "State topic (subscribe)"
+msgstr "State topic (subscribe)"
+
+msgid "Topic, then the substring that means \"on\" in its payload."
+msgstr "Topic, then the substring that means \"on\" in its payload."
+
+msgid "Set topic (publish)"
+msgstr "Set topic (publish)"
+
+msgid "Set payload (on / off)"
+msgstr "Set payload (on / off)"
+
+msgid "Shared Work Light"
+msgstr "Shared Work Light"
+
+msgid "A light/relay shared across multiple printers, kept on as long as THIS printer's plug (above) OR any peer printer's topic reports \"on\". Each PrintButler instance runs this independently - list the other printers' plug state topics as peers."
+msgstr "A light/relay shared across multiple printers, kept on as long as THIS printer's plug (above) OR any peer printer's topic reports \"on\". Each PrintButler instance runs this independently - list the other printers' plug state topics as peers."
+
+msgid "Keep the shared light on while any tracked printer is powered"
+msgstr "Keep the shared light on while any tracked printer is powered"
+
+msgid "State topic (optional, self-heal)"
+msgstr "State topic (optional, self-heal)"
+
+msgid "If set, PrintButler re-asserts \"on\" if something else switches it off while a printer is still running."
+msgstr "If set, PrintButler re-asserts \"on\" if something else switches it off while a printer is still running."
+
+msgid "Peer printer topics"
+msgstr "Peer printer topics"
+
+msgid "One MQTT topic per line (e.g. the other printer's plug state topic), plus the substring meaning \"on\"."
+msgstr "One MQTT topic per line (e.g. the other printer's plug state topic), plus the substring meaning \"on\"."
+
+msgid "Runs a shutdown command on this OctoPrint host, waits for it to power down, then cuts mains power via the printer plug (Printer Plug tab) over MQTT."
+msgstr "Runs a shutdown command on this OctoPrint host, waits for it to power down, then cuts mains power via the printer plug (Printer Plug tab) over MQTT."
+
+msgid "Enable the Safe Shutdown button"
+msgstr "Enable the Safe Shutdown button"
+
+msgid "Shutdown command"
+msgstr "Shutdown command"
+
+msgid "Runs on the OctoPrint host. Needs passwordless sudo for shutdown if using \"sudo\"."
+msgstr "Runs on the OctoPrint host. Needs passwordless sudo for shutdown if using \"sudo\"."
+
+msgid "Power-off delay (seconds)"
+msgstr "Power-off delay (seconds)"
+
+msgid "How long to wait for the host to fully power down before cutting mains power."
+msgstr "How long to wait for the host to fully power down before cutting mains power."
+
+msgid "Shutdown Printer Now"
+msgstr "Shutdown Printer Now"
+
+msgid "Shutdown in progress..."
+msgstr "Shutdown in progress..."
+
+msgid "Live Status"
+msgstr "Live Status"
+
+msgid "MQTT helper"
+msgstr "MQTT helper"
+
+msgid "This printer's plug"
+msgstr "This printer's plug"
+
+msgid "Shared light desired state"
+msgstr "Shared light desired state"
+
+msgid "Quiet hours active now"
+msgstr "Quiet hours active now"
+
+msgid "Refresh"
+msgstr "Refresh"
+
+msgid "Clear log"
+msgstr "Clear log"
+
+msgid "MQTT connected"
+msgstr "MQTT connected"
+
+msgid "MQTT unavailable"
+msgstr "MQTT unavailable"
+
+msgid "Unknown"
+msgstr "Unknown"
+
+msgid "On"
+msgstr "On"
+
+msgid "Off"
+msgstr "Off"
+
+msgid "Yes"
+msgstr "Yes"
+
+msgid "No"
+msgstr "No"
+
+msgid "Shut down this printer now? Mains power will be cut after the configured delay."
+msgstr "Shut down this printer now? Mains power will be cut after the configured delay."
+
+msgid "PrintButler"
+msgstr "PrintButler"
+
+msgid "Shutdown initiated."
+msgstr "Shutdown initiated."
+
+msgid "Could not start shutdown."
+msgstr "Could not start shutdown."
+
+msgid "Request failed."
+msgstr "Request failed."

@@ -1,0 +1,23 @@
+*.egg-info/
+*.egg
+*.pyc
+*.pyo
+__pycache__/
+dist/
+build/
+.eggs/
+.tox/
+.cache/
+.pytest_cache/
+venv/
+.venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OctoPrint dev
+instance/
