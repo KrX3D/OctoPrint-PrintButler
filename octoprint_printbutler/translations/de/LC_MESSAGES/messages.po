@@ -1,0 +1,216 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: OctoPrint-PrintButler\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-21 00:00+0000\n"
+"PO-Revision-Date: 2026-08-21 00:00+0000\n"
+"Last-Translator: KrX3D\n"
+"Language-Team: German\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Enable PrintButler"
+msgstr "PrintButler aktivieren"
+
+msgid "Version:"
+msgstr "Version:"
+
+msgid "Print Finished"
+msgstr "Druck fertig"
+
+msgid "Finish Light"
+msgstr "Fertig-Licht"
+
+msgid "Printer Plug"
+msgstr "Drucker-Steckdose"
+
+msgid "Shared Light"
+msgstr "Gemeinsames Licht"
+
+msgid "Safe Shutdown"
+msgstr "Sicheres Herunterfahren"
+
+msgid "Status / Log"
+msgstr "Status / Log"
+
+msgid "Print Finished Notification"
+msgstr "Benachrichtigung bei Druckende"
+
+msgid "Fires once, on OctoPrint's own \"print done\" event - no polling or MQTT progress tracking needed. Typically used to trigger a WLED effect, light flash, or any other MQTT-driven notification."
+msgstr "Wird einmalig ausgelöst, direkt über OctoPrints eigenes \"Druck fertig\"-Ereignis - kein Abfragen oder MQTT-Fortschritts-Tracking nötig. Typischerweise für einen WLED-Effekt, Lichtblitz oder eine andere MQTT-gesteuerte Benachrichtigung genutzt."
+
+msgid "Publish an MQTT notification when a print finishes"
+msgstr "MQTT-Benachrichtigung senden, wenn ein Druck fertig ist"
+
+msgid "Topic"
+msgstr "Topic"
+
+msgid "Payload (on / off)"
+msgstr "Payload (an / aus)"
+
+msgid "Payload sent, then reverted after the delay below."
+msgstr "Payload wird gesendet und nach der unten angegebenen Verzögerung zurückgesetzt."
+
+msgid "QoS / Retain"
+msgstr "QoS / Retain"
+
+msgid "Retain"
+msgstr "Retain"
+
+msgid "Revert after (seconds)"
+msgstr "Zurücksetzen nach (Sekunden)"
+
+msgid "0 = never revert, stays on the \"on\" payload."
+msgstr "0 = nie zurücksetzen, bleibt auf dem \"an\"-Payload."
+
+msgid "Quiet Hours"
+msgstr "Ruhezeiten"
+
+msgid "During this window, the finish notification, the finish light, and the shared-light-on-finish action are all suppressed. Plug-follows-light control below is unaffected."
+msgstr "In diesem Zeitfenster werden die Fertig-Benachrichtigung, das Fertig-Licht und das Einschalten des gemeinsamen Lichts bei Druckende unterdrückt. Die Steckdosen-folgt-Licht-Steuerung weiter unten ist davon nicht betroffen."
+
+msgid "Enable quiet hours"
+msgstr "Ruhezeiten aktivieren"
+
+msgid "From / To"
+msgstr "Von / Bis"
+
+msgid "Can cross midnight, e.g. 22:00 → 10:00."
+msgstr "Kann über Mitternacht gehen, z. B. 22:00 → 10:00."
+
+msgid "Per-Printer Finish Indicator Light"
+msgstr "Fertig-Anzeigelicht pro Drucker"
+
+msgid "A dedicated light/relay for this printer only, turned on when this printer finishes a print."
+msgstr "Ein eigenes Licht/Relais nur für diesen Drucker, das eingeschaltet wird, wenn dieser Drucker einen Druck beendet."
+
+msgid "Turn on a light/relay when this printer finishes"
+msgstr "Licht/Relais einschalten, wenn dieser Drucker fertig ist"
+
+msgid "This Printer's Power Plug"
+msgstr "Steckdose dieses Druckers"
+
+msgid "The smart plug/switch powering this printer's mains. PrintButler subscribes to its state (used by the shared light below) and can switch it off as the last step of Safe Shutdown."
+msgstr "Die Smart-Steckdose/der Schalter, der diesen Drucker mit Strom versorgt. PrintButler abonniert deren Status (wird für das gemeinsame Licht weiter unten genutzt) und kann sie als letzten Schritt des sicheren Herunterfahrens ausschalten."
+
+msgid "Track / control this printer's power plug"
+msgstr "Steckdose dieses Druckers überwachen / steuern"
+
+msgid "State topic (subscribe)"
+msgstr "Status-Topic (abonnieren)"
+
+msgid "Topic, then the substring that means \"on\" in its payload."
+msgstr "Topic, danach der Teilstring, der im Payload \"an\" bedeutet."
+
+msgid "Set topic (publish)"
+msgstr "Steuer-Topic (senden)"
+
+msgid "Set payload (on / off)"
+msgstr "Steuer-Payload (an / aus)"
+
+msgid "Shared Work Light"
+msgstr "Gemeinsames Arbeitslicht"
+
+msgid "A light/relay shared across multiple printers, kept on as long as THIS printer's plug (above) OR any peer printer's topic reports \"on\". Each PrintButler instance runs this independently - list the other printers' plug state topics as peers."
+msgstr "Ein Licht/Relais, das sich mehrere Drucker teilen. Es bleibt an, solange die Steckdose DIESES Druckers (oben) ODER das Topic eines anderen Druckers \"an\" meldet. Jede PrintButler-Instanz macht das unabhängig - trage die Status-Topics der anderen Drucker-Steckdosen als Peers ein."
+
+msgid "Keep the shared light on while any tracked printer is powered"
+msgstr "Gemeinsames Licht an lassen, solange irgendein überwachter Drucker eingeschaltet ist"
+
+msgid "State topic (optional, self-heal)"
+msgstr "Status-Topic (optional, Selbstkorrektur)"
+
+msgid "If set, PrintButler re-asserts \"on\" if something else switches it off while a printer is still running."
+msgstr "Falls gesetzt, schaltet PrintButler erneut auf \"an\", wenn etwas anderes es ausschaltet, während noch ein Drucker läuft."
+
+msgid "Peer printer topics"
+msgstr "Topics der anderen Drucker"
+
+msgid "One MQTT topic per line (e.g. the other printer's plug state topic), plus the substring meaning \"on\"."
+msgstr "Ein MQTT-Topic pro Zeile (z. B. das Status-Topic der Steckdose des anderen Druckers), plus der Teilstring, der \"an\" bedeutet."
+
+msgid "Runs a shutdown command on this OctoPrint host, waits for it to power down, then cuts mains power via the printer plug (Printer Plug tab) over MQTT."
+msgstr "Führt einen Shutdown-Befehl auf diesem OctoPrint-Host aus, wartet bis er heruntergefahren ist, und trennt dann über MQTT die Stromversorgung an der Drucker-Steckdose (Tab \"Drucker-Steckdose\")."
+
+msgid "Enable the Safe Shutdown button"
+msgstr "Button für sicheres Herunterfahren aktivieren"
+
+msgid "Shutdown command"
+msgstr "Shutdown-Befehl"
+
+msgid "Runs on the OctoPrint host. Needs passwordless sudo for shutdown if using \"sudo\"."
+msgstr "Wird auf dem OctoPrint-Host ausgeführt. Benötigt passwortloses sudo für shutdown, falls \"sudo\" verwendet wird."
+
+msgid "Power-off delay (seconds)"
+msgstr "Verzögerung bis Stromabschaltung (Sekunden)"
+
+msgid "How long to wait for the host to fully power down before cutting mains power."
+msgstr "Wie lange gewartet wird, bis der Host vollständig heruntergefahren ist, bevor die Stromversorgung getrennt wird."
+
+msgid "Shutdown Printer Now"
+msgstr "Drucker jetzt herunterfahren"
+
+msgid "Shutdown in progress..."
+msgstr "Herunterfahren läuft ..."
+
+msgid "Live Status"
+msgstr "Live-Status"
+
+msgid "MQTT helper"
+msgstr "MQTT-Verbindung"
+
+msgid "This printer's plug"
+msgstr "Steckdose dieses Druckers"
+
+msgid "Shared light desired state"
+msgstr "Sollzustand gemeinsames Licht"
+
+msgid "Quiet hours active now"
+msgstr "Ruhezeit gerade aktiv"
+
+msgid "Refresh"
+msgstr "Aktualisieren"
+
+msgid "Clear log"
+msgstr "Log leeren"
+
+msgid "MQTT connected"
+msgstr "MQTT verbunden"
+
+msgid "MQTT plugin not found"
+msgstr "MQTT-Plugin nicht gefunden"
+
+msgid "MQTT not connected"
+msgstr "MQTT nicht verbunden"
+
+msgid "Unknown"
+msgstr "Unbekannt"
+
+msgid "On"
+msgstr "An"
+
+msgid "Off"
+msgstr "Aus"
+
+msgid "Yes"
+msgstr "Ja"
+
+msgid "No"
+msgstr "Nein"
+
+msgid "Shut down this printer now? Mains power will be cut after the configured delay."
+msgstr "Diesen Drucker jetzt herunterfahren? Die Stromversorgung wird nach der eingestellten Verzögerung getrennt."
+
+msgid "PrintButler"
+msgstr "PrintButler"
+
+msgid "Shutdown initiated."
+msgstr "Herunterfahren gestartet."
+
+msgid "Could not start shutdown."
+msgstr "Herunterfahren konnte nicht gestartet werden."
+
+msgid "Request failed."
+msgstr "Anfrage fehlgeschlagen."

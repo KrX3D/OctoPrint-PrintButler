@@ -1,0 +1,6 @@
+include README.md
+include LICENSE
+recursive-include octoprint_printbutler *.py
+recursive-include octoprint_printbutler/templates *
+recursive-include octoprint_printbutler/static *
+recursive-include octoprint_printbutler/translations *
