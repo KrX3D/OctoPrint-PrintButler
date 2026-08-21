@@ -5,6 +5,7 @@ OctoPrint-PrintButler  -  __init__.py
 from __future__ import absolute_import, unicode_literals
 
 import datetime
+import json
 import shlex
 import subprocess
 import threading
@@ -41,6 +42,12 @@ class PrintButlerPlugin(
         self._shutdown_lock = threading.Lock()
         self._shutdown_running = False
 
+        self._cooldown_thread = None
+        self._cooldown_stop = None
+        # Auto-shutdown-when-cool arm/disarm - live, in-memory, resets to
+        # armed on every OctoPrint start (see the navbar toggle).
+        self._auto_shutdown_armed = True
+
     # -- SettingsPlugin ----------------------------------------------------
 
     def get_settings_defaults(self):
@@ -66,37 +73,53 @@ class PrintButlerPlugin(
             # Per-printer finish indicator light
             finish_light_enabled=False,
             finish_light_topic="",
-            finish_light_payload_on="ON",
-            finish_light_payload_off="OFF",
+            finish_light_payload_on='{"state": "ON"}',
+            finish_light_payload_off='{"state": "OFF"}',
             finish_light_qos=0,
             finish_light_retain=False,
             finish_light_turn_off_after=0,  # 0 = leave on until next print starts
 
-            # This printer's own power plug/switch
+            # This printer's own power plug/switch - read-only tracking, used
+            # by the shared light below. Actually cutting power is handled
+            # externally, see the "Safe shutdown" trigger topic further down.
             plug_enabled=False,
             plug_state_topic="",
             plug_state_payload_on="ON",
-            plug_set_topic="",
-            plug_set_payload_on="ON",
-            plug_set_payload_off="OFF",
-            plug_qos=0,
-            plug_retain=False,
+            plug_state_json_key="state",  # blank = match against the raw payload
 
             # Shared work light (stays on while this OR any peer printer is on)
             shared_light_enabled=False,
             shared_light_set_topic="",
-            shared_light_payload_on="ON",
-            shared_light_payload_off="OFF",
+            shared_light_payload_on='{"state": "ON"}',
+            shared_light_payload_off='{"state": "OFF"}',
             shared_light_qos=0,
             shared_light_retain=False,
             shared_light_state_topic="",
+            shared_light_state_json_key="state",
             shared_light_peer_topics="",
             shared_light_peer_payload_on="ON",
+            shared_light_peer_json_key="state",
 
-            # Safe shutdown
+            # Safe shutdown - this host can't reliably cut its own mains power
+            # (it dies mid-shutdown), so PrintButler only publishes a trigger
+            # topic beforehand; an external automation (e.g. Home Assistant)
+            # is responsible for actually switching the plug off once it has
+            # confirmed the host is down.
             shutdown_enabled=False,
             shutdown_command="sudo shutdown -h now",
-            shutdown_plug_off_delay=30,
+            shutdown_trigger_topic="",
+            shutdown_trigger_payload_on="ON",
+            shutdown_trigger_qos=1,
+            shutdown_trigger_retain=False,
+            shutdown_trigger_settle_seconds=3,
+
+            # Auto-shutdown when cool: after a print finishes, watch bed/nozzle
+            # temps and fire Safe Shutdown once both stay below threshold for
+            # a sustained period. Gated by the navbar arm/disarm toggle too.
+            auto_shutdown_enabled=False,
+            auto_shutdown_bed_threshold=40,
+            auto_shutdown_tool_threshold=40,
+            auto_shutdown_confirm_seconds=60,
         )
 
     def on_settings_save(self, data):
@@ -107,12 +130,19 @@ class PrintButlerPlugin(
     # -- TemplatePlugin ------------------------------------------------------
 
     def get_template_configs(self):
-        return [dict(
-            type="settings",
-            name="PrintButler",
-            template="printbutler_settings.jinja2",
-            custom_bindings=True,
-        )]
+        return [
+            dict(
+                type="settings",
+                name="PrintButler",
+                template="printbutler_settings.jinja2",
+                custom_bindings=True,
+            ),
+            dict(
+                type="navbar",
+                custom_bindings=True,
+                template="printbutler_navbar.jinja2",
+            ),
+        ]
 
     # -- AssetPlugin -----------------------------------------------------------
 
@@ -192,7 +222,10 @@ class PrintButlerPlugin(
         if self._get_bool("shared_light_enabled") and not quiet:
             self._recompute_shared_light(reason="print_done")
 
+        self._start_cooldown_watch()
+
     def _handle_print_started(self):
+        self._stop_cooldown_watch()
         if self._get_bool("finish_light_enabled"):
             self._cancel_timer("_finish_light_off_timer")
             self._set_finish_light(False)
@@ -271,20 +304,32 @@ class PrintButlerPlugin(
         return [line.strip() for line in raw.splitlines() if line.strip()]
 
     def _on_plug_state_message(self, topic, payload, retained=None, qos=None, **kwargs):
-        val = self._payload_is_on(payload, self._settings.get(["plug_state_payload_on"]))
+        val = self._payload_is_on(
+            payload,
+            self._settings.get(["plug_state_payload_on"]),
+            json_key=self._settings.get(["plug_state_json_key"]),
+        )
         self._plug_state = val
         self._log("Plug state -> {} ({})".format(val, topic))
         if self._get_bool("shared_light_enabled"):
             self._recompute_shared_light(reason="plug_state")
 
     def _on_peer_state_message(self, topic, payload, retained=None, qos=None, **kwargs):
-        val = self._payload_is_on(payload, self._settings.get(["shared_light_peer_payload_on"]))
+        val = self._payload_is_on(
+            payload,
+            self._settings.get(["shared_light_peer_payload_on"]),
+            json_key=self._settings.get(["shared_light_peer_json_key"]),
+        )
         self._peer_states[topic] = val
         self._log("Peer state -> {} = {}".format(topic, val))
         self._recompute_shared_light(reason="peer_state")
 
     def _on_shared_light_state_message(self, topic, payload, retained=None, qos=None, **kwargs):
-        val = self._payload_is_on(payload, self._settings.get(["shared_light_payload_on"]))
+        val = self._payload_is_on(
+            payload,
+            self._settings.get(["shared_light_payload_on"]),
+            json_key=self._settings.get(["shared_light_state_json_key"]),
+        )
         if self._shared_light_desired is True and val is False:
             self._log("Shared light dropped out unexpectedly, re-asserting ON.", "WARNING")
             self._set_shared_light(True)
@@ -333,7 +378,15 @@ class PrintButlerPlugin(
             return False
 
     @staticmethod
-    def _payload_is_on(raw_payload, match_str):
+    def _payload_is_on(raw_payload, match_str, json_key=""):
+        """
+        Zigbee2MQTT (and similar) publish a full JSON state object, e.g.
+        {"state": "ON", "indicator_mode": "off/on", ...} - a naive substring
+        search for "ON" would false-positive on unrelated fields like
+        "off/on". When json_key is set, parse the payload as JSON and
+        compare that field's value exactly; otherwise (or if parsing fails)
+        fall back to comparing the whole payload as plain text.
+        """
         try:
             if isinstance(raw_payload, (bytes, bytearray)):
                 text = raw_payload.decode("utf-8", errors="replace")
@@ -341,8 +394,18 @@ class PrintButlerPlugin(
                 text = str(raw_payload)
         except Exception:
             text = str(raw_payload)
-        match = (match_str or "ON").strip()
-        return match.lower() in text.lower()
+
+        match = (match_str or "ON").strip().strip('"').lower()
+
+        if json_key:
+            try:
+                data = json.loads(text)
+            except Exception:
+                data = None
+            if isinstance(data, dict) and json_key in data:
+                return str(data[json_key]).strip().lower() == match
+
+        return text.strip().strip('"').lower() == match
 
     def _mqtt_publish(self, topic, payload, qos=0, retain=False):
         if not topic:
@@ -362,6 +425,16 @@ class PrintButlerPlugin(
     # -- Safe shutdown ---------------------------------------------------------
 
     def _do_safe_shutdown(self):
+        """
+        This host cannot reliably cut its own mains power: once the shutdown
+        command runs, OctoPrint's own process (and its MQTT connection) can
+        die at any point during the shutdown sequence, well before a fixed
+        in-process delay would elapse. So PrintButler's job ends at publishing
+        a trigger topic before shutting down - actually switching the plug
+        off is left to something that stays alive independently of this host
+        (e.g. a Home Assistant automation watching that topic, which can
+        safely wait for/confirm the host is really down before cutting power).
+        """
         acquired = self._shutdown_lock.acquire(blocking=False)
         if not acquired:
             self._log("Safe shutdown already in progress.", "WARNING")
@@ -370,6 +443,30 @@ class PrintButlerPlugin(
         try:
             self._log("=" * 60)
             self._log("Safe shutdown requested.")
+            self._stop_cooldown_watch()
+
+            trigger_topic = self._settings.get(["shutdown_trigger_topic"])
+            if trigger_topic:
+                qos = int(self._settings.get(["shutdown_trigger_qos"]) or 0)
+                retain = self._get_bool("shutdown_trigger_retain")
+                payload = self._settings.get(["shutdown_trigger_payload_on"]) or "ON"
+                self._log(
+                    "Publishing shutdown trigger -> {} = {} (an external "
+                    "automation is expected to cut mains power once it "
+                    "confirms this host is actually down).".format(trigger_topic, payload)
+                )
+                self._mqtt_publish(trigger_topic, payload, qos=qos, retain=retain)
+
+                settle = int(self._settings.get(["shutdown_trigger_settle_seconds"]) or 0)
+                if settle > 0:
+                    self._log("Waiting {}s for the trigger to leave the host...".format(settle))
+                    time.sleep(settle)
+            else:
+                self._log(
+                    "No shutdown trigger topic configured - nothing will cut "
+                    "mains power once this host goes down.",
+                    "WARNING",
+                )
 
             cmd = self._settings.get(["shutdown_command"]) or "sudo shutdown -h now"
             self._log("Running shutdown command: {}".format(cmd))
@@ -379,35 +476,90 @@ class PrintButlerPlugin(
                 self._log("Shutdown command failed: {}".format(exc), "ERROR")
                 self._log(traceback.format_exc(), "DEBUG")
 
-            if self._get_bool("plug_enabled") and self._settings.get(["plug_set_topic"]):
-                delay = int(self._settings.get(["shutdown_plug_off_delay"]) or 30)
-                self._log(
-                    "Waiting {}s for the host to power down before cutting mains "
-                    "power via MQTT.".format(delay)
-                )
-                time.sleep(delay)
-                self._set_plug(False)
-            else:
-                self._log("No power plug configured - skipping MQTT power cut.")
-
-            self._log("Safe shutdown sequence complete.")
+            self._log("Safe shutdown sequence complete - host is going down.")
             self._log("=" * 60)
         finally:
             self._shutdown_running = False
             self._shutdown_lock.release()
 
-    def _set_plug(self, on):
-        topic = self._settings.get(["plug_set_topic"])
-        if not topic:
+    # -- Auto-shutdown when cool ------------------------------------------------
+
+    def _start_cooldown_watch(self):
+        if not self._get_bool("auto_shutdown_enabled"):
             return
-        qos = int(self._settings.get(["plug_qos"]) or 0)
-        retain = self._get_bool("plug_retain")
-        payload = (
-            self._settings.get(["plug_set_payload_on"])
-            if on
-            else self._settings.get(["plug_set_payload_off"])
+        if not self._get_bool("shutdown_enabled"):
+            self._log(
+                "Auto-shutdown-when-cool skipped - Safe Shutdown itself is disabled.",
+                "WARNING",
+            )
+            return
+        if not self._auto_shutdown_armed:
+            self._log("Auto-shutdown-when-cool skipped - disarmed via the navbar toggle.")
+            return
+
+        self._stop_cooldown_watch()
+        stop_event = threading.Event()
+        self._cooldown_stop = stop_event
+        self._cooldown_thread = threading.Thread(
+            target=self._cooldown_loop, args=(stop_event,),
+            name="printbutler-cooldown", daemon=True,
         )
-        self._mqtt_publish(topic, payload, qos=qos, retain=retain)
+        self._cooldown_thread.start()
+
+    def _stop_cooldown_watch(self):
+        if self._cooldown_stop is not None:
+            self._cooldown_stop.set()
+        self._cooldown_stop = None
+        self._cooldown_thread = None
+
+    def _cooldown_loop(self, stop_event):
+        bed_thresh = float(self._settings.get(["auto_shutdown_bed_threshold"]) or 40)
+        tool_thresh = float(self._settings.get(["auto_shutdown_tool_threshold"]) or 40)
+        confirm_secs = int(self._settings.get(["auto_shutdown_confirm_seconds"]) or 60)
+        self._log(
+            "Cooldown watch started (bed<={} tool<={}, sustained for {}s).".format(
+                bed_thresh, tool_thresh, confirm_secs
+            )
+        )
+
+        cool_since = None
+        while not stop_event.is_set():
+            if self._printer.is_printing() or self._printer.is_paused():
+                self._log("Cooldown watch stopped - printer is active again.")
+                return
+            if not self._auto_shutdown_armed:
+                self._log("Cooldown watch stopped - disarmed via the navbar toggle.")
+                return
+
+            temps = self._printer.get_current_temperatures() or {}
+            bed = (temps.get("bed") or {}).get("actual")
+            tool0 = (temps.get("tool0") or {}).get("actual")
+            is_cool = (
+                bed is not None and bed <= bed_thresh
+                and tool0 is not None and tool0 <= tool_thresh
+            )
+
+            now = time.time()
+            if is_cool:
+                if cool_since is None:
+                    cool_since = now
+                    self._log(
+                        "Bed/nozzle below threshold (bed={} tool={}), confirming "
+                        "for {}s...".format(bed, tool0, confirm_secs)
+                    )
+                elif now - cool_since >= confirm_secs:
+                    self._log("Cooldown confirmed - triggering safe shutdown.")
+                    threading.Thread(
+                        target=self._do_safe_shutdown, name="printbutler-autoshutdown",
+                        daemon=True,
+                    ).start()
+                    return
+            else:
+                if cool_since is not None:
+                    self._log("Temperature rose again, resetting cooldown timer.")
+                cool_since = None
+
+            stop_event.wait(10)
 
     # -- SimpleApiPlugin -------------------------------------------------------
 
@@ -415,6 +567,7 @@ class PrintButlerPlugin(
         return dict(
             shutdown_now=[],
             clear_logs=[],
+            set_armed=["armed"],
         )
 
     def on_api_command(self, command, data):
@@ -441,6 +594,23 @@ class PrintButlerPlugin(
             self._log_entries.clear()
             return flask.jsonify({"success": True})
 
+        elif command == "set_armed":
+            self._auto_shutdown_armed = bool(data.get("armed"))
+            self._log(
+                "Auto-shutdown-when-cool {}.".format(
+                    "armed" if self._auto_shutdown_armed else "disarmed"
+                )
+            )
+            if self._auto_shutdown_armed:
+                self._start_cooldown_watch()
+            else:
+                self._stop_cooldown_watch()
+            self._plugin_manager.send_plugin_message(
+                self._identifier,
+                {"event": "armed_changed", "armed": self._auto_shutdown_armed},
+            )
+            return flask.jsonify({"success": True, "armed": self._auto_shutdown_armed})
+
         return flask.abort(400)
 
     def on_api_get(self, request):
@@ -456,6 +626,8 @@ class PrintButlerPlugin(
             peer_states=self._peer_states,
             quiet_hours_active=self._in_quiet_hours(),
             shutdown_running=self._shutdown_running,
+            auto_shutdown_armed=self._auto_shutdown_armed,
+            cooldown_watching=bool(self._cooldown_thread and self._cooldown_thread.is_alive()),
             logs=list(self._log_entries),
         ))
 

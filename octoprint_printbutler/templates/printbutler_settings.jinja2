@@ -136,7 +136,7 @@
                 <div class="controls">
                     <input type="text" class="input-block-level"
                            data-bind="value: settings.finish_light_topic, enable: settings.finish_light_enabled"
-                           placeholder="zigbee2mqtt/3d_drucker_licht_relay_1/set">
+                           placeholder="zigbee2mqtt/3D Drucker Licht Relais 1/set">
                 </div>
             </div>
 
@@ -145,10 +145,10 @@
                 <div class="controls">
                     <input type="text" style="width:150px; display:inline-block;"
                            data-bind="value: settings.finish_light_payload_on, enable: settings.finish_light_enabled"
-                           placeholder="ON">
+                           placeholder='{"state": "ON"}'>
                     <input type="text" style="width:150px; display:inline-block;"
                            data-bind="value: settings.finish_light_payload_off, enable: settings.finish_light_enabled"
-                           placeholder="OFF">
+                           placeholder='{"state": "OFF"}'>
                 </div>
             </div>
 
@@ -182,14 +182,14 @@
         <div class="tab-pane" id="printbutler_tab_plug">
             <p class="printbutler-section-heading">{{ _("This Printer's Power Plug") }}</p>
             <p class="muted">
-                {{ _("The smart plug/switch powering this printer's mains. PrintButler subscribes to its state (used by the shared light below) and can switch it off as the last step of Safe Shutdown.") }}
+                {{ _("The smart plug/switch powering this printer's mains. PrintButler only reads its state here (used by the Shared Light tab below) - actually cutting power after Safe Shutdown is handled externally, see the Safe Shutdown tab.") }}
             </p>
 
             <div class="control-group">
                 <div class="controls">
                     <label class="checkbox">
                         <input type="checkbox" data-bind="checked: settings.plug_enabled">
-                        {{ _("Track / control this printer's power plug") }}
+                        {{ _("Track this printer's power plug state") }}
                     </label>
                 </div>
             </div>
@@ -199,48 +199,20 @@
                 <div class="controls">
                     <input type="text" class="input-block-level"
                            data-bind="value: settings.plug_state_topic, enable: settings.plug_enabled"
-                           placeholder="zigbee2mqtt/prusa_links_plug">
-                    <input type="text" style="width:150px;"
+                           placeholder="zigbee2mqtt/Prusa Mk3s Zigbee Plug">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("\"On\" value") }}</label>
+                <div class="controls">
+                    <input type="text" style="width:150px; display:inline-block;"
                            data-bind="value: settings.plug_state_payload_on, enable: settings.plug_enabled"
                            placeholder="ON">
-                    <span class="help-inline muted">{{ _("Topic, then the substring that means \"on\" in its payload.") }}</span>
-                </div>
-            </div>
-
-            <div class="control-group">
-                <label class="control-label">{{ _("Set topic (publish)") }}</label>
-                <div class="controls">
-                    <input type="text" class="input-block-level"
-                           data-bind="value: settings.plug_set_topic, enable: settings.plug_enabled"
-                           placeholder="zigbee2mqtt/prusa_links_plug/set">
-                </div>
-            </div>
-
-            <div class="control-group">
-                <label class="control-label">{{ _("Set payload (on / off)") }}</label>
-                <div class="controls">
                     <input type="text" style="width:150px; display:inline-block;"
-                           data-bind="value: settings.plug_set_payload_on, enable: settings.plug_enabled"
-                           placeholder="ON">
-                    <input type="text" style="width:150px; display:inline-block;"
-                           data-bind="value: settings.plug_set_payload_off, enable: settings.plug_enabled"
-                           placeholder="OFF">
-                </div>
-            </div>
-
-            <div class="control-group">
-                <label class="control-label">{{ _("QoS / Retain") }}</label>
-                <div class="controls">
-                    <select style="width:70px; display:inline-block;"
-                            data-bind="value: settings.plug_qos, enable: settings.plug_enabled">
-                        <option value="0">0</option>
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                    </select>
-                    <label class="checkbox" style="display:inline-block; margin-left:14px;">
-                        <input type="checkbox" data-bind="checked: settings.plug_retain, enable: settings.plug_enabled">
-                        {{ _("Retain") }}
-                    </label>
+                           data-bind="value: settings.plug_state_json_key, enable: settings.plug_enabled"
+                           placeholder="state">
+                    <span class="help-inline muted">{{ _("Value, then the JSON field to read it from (leave the field blank for a plain-text payload).") }}</span>
                 </div>
             </div>
         </div>
@@ -266,7 +238,7 @@
                 <div class="controls">
                     <input type="text" class="input-block-level"
                            data-bind="value: settings.shared_light_set_topic, enable: settings.shared_light_enabled"
-                           placeholder="zigbee2mqtt/3d_drucker_netzteil/set">
+                           placeholder="zigbee2mqtt/3D Drucker Licht/set">
                 </div>
             </div>
 
@@ -275,10 +247,10 @@
                 <div class="controls">
                     <input type="text" style="width:150px; display:inline-block;"
                            data-bind="value: settings.shared_light_payload_on, enable: settings.shared_light_enabled"
-                           placeholder="ON">
+                           placeholder='{"state": "ON"}'>
                     <input type="text" style="width:150px; display:inline-block;"
                            data-bind="value: settings.shared_light_payload_off, enable: settings.shared_light_enabled"
-                           placeholder="OFF">
+                           placeholder='{"state": "OFF"}'>
                 </div>
             </div>
 
@@ -303,8 +275,11 @@
                 <div class="controls">
                     <input type="text" class="input-block-level"
                            data-bind="value: settings.shared_light_state_topic, enable: settings.shared_light_enabled"
-                           placeholder="zigbee2mqtt/3d_drucker_netzteil">
-                    <span class="help-inline muted">{{ _("If set, PrintButler re-asserts \"on\" if something else switches it off while a printer is still running.") }}</span>
+                           placeholder="zigbee2mqtt/3D Drucker Licht">
+                    <input type="text" style="width:150px;"
+                           data-bind="value: settings.shared_light_state_json_key, enable: settings.shared_light_enabled"
+                           placeholder="state">
+                    <span class="help-inline muted">{{ _("JSON field to read the on/off value from (blank = plain-text payload). If set, PrintButler re-asserts \"on\" if something else switches it off while a printer is still running.") }}</span>
                 </div>
             </div>
 
@@ -313,11 +288,14 @@
                 <div class="controls">
                     <textarea rows="4" class="input-block-level"
                               data-bind="value: settings.shared_light_peer_topics, enable: settings.shared_light_enabled"
-                              placeholder="zigbee2mqtt/prusa_rechts_plug"></textarea>
+                              placeholder="zigbee2mqtt/Prusa Rechts Zigbee Plug"></textarea>
                     <input type="text" style="width:150px;"
                            data-bind="value: settings.shared_light_peer_payload_on, enable: settings.shared_light_enabled"
                            placeholder="ON">
-                    <span class="help-inline muted">{{ _("One MQTT topic per line (e.g. the other printer's plug state topic), plus the substring meaning \"on\".") }}</span>
+                    <input type="text" style="width:150px;"
+                           data-bind="value: settings.shared_light_peer_json_key, enable: settings.shared_light_enabled"
+                           placeholder="state">
+                    <span class="help-inline muted">{{ _("One MQTT topic per line, plus the \"on\" value and the JSON field to read it from (blank = plain-text payload). Same format assumed for all peers.") }}</span>
                 </div>
             </div>
         </div>
@@ -326,14 +304,14 @@
         <div class="tab-pane" id="printbutler_tab_shutdown">
             <p class="printbutler-section-heading">{{ _("Safe Shutdown") }}</p>
             <p class="muted">
-                {{ _("Runs a shutdown command on this OctoPrint host, waits for it to power down, then cuts mains power via the printer plug (Printer Plug tab) over MQTT.") }}
+                {{ _("This host cannot cut its own mains power reliably - once the shutdown command runs, OctoPrint (and MQTT) will die before it can finish. Instead, PrintButler publishes a trigger topic BEFORE shutting down; wire up a Home Assistant automation (or similar) that watches this topic and cuts power to the printer plug once it has confirmed the host is actually down.") }}
             </p>
 
             <div class="control-group">
                 <div class="controls">
                     <label class="checkbox">
                         <input type="checkbox" data-bind="checked: settings.shutdown_enabled">
-                        {{ _("Enable the Safe Shutdown button") }}
+                        {{ _("Enable Safe Shutdown") }}
                     </label>
                 </div>
             </div>
@@ -349,11 +327,46 @@
             </div>
 
             <div class="control-group">
-                <label class="control-label">{{ _("Power-off delay (seconds)") }}</label>
+                <label class="control-label">{{ _("Trigger topic (publish)") }}</label>
+                <div class="controls">
+                    <input type="text" class="input-block-level"
+                           data-bind="value: settings.shutdown_trigger_topic, enable: settings.shutdown_enabled"
+                           placeholder="printbutler/prusa_links/shutdown">
+                    <span class="help-inline muted">{{ _("Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely.") }}</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Trigger payload") }}</label>
+                <div class="controls">
+                    <input type="text" style="width:150px; display:inline-block;"
+                           data-bind="value: settings.shutdown_trigger_payload_on, enable: settings.shutdown_enabled"
+                           placeholder="ON">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("QoS / Retain") }}</label>
+                <div class="controls">
+                    <select style="width:70px; display:inline-block;"
+                            data-bind="value: settings.shutdown_trigger_qos, enable: settings.shutdown_enabled">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                    </select>
+                    <label class="checkbox" style="display:inline-block; margin-left:14px;">
+                        <input type="checkbox" data-bind="checked: settings.shutdown_trigger_retain, enable: settings.shutdown_enabled">
+                        {{ _("Retain") }}
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Settle delay (seconds)") }}</label>
                 <div class="controls">
                     <input type="number" min="0" style="width:80px;"
-                           data-bind="value: settings.shutdown_plug_off_delay, enable: settings.shutdown_enabled">
-                    <span class="help-inline muted">{{ _("How long to wait for the host to fully power down before cutting mains power.") }}</span>
+                           data-bind="value: settings.shutdown_trigger_settle_seconds, enable: settings.shutdown_enabled">
+                    <span class="help-inline muted">{{ _("Wait this long after publishing the trigger before running the shutdown command, so the message has time to actually leave the host.") }}</span>
                 </div>
             </div>
 
@@ -366,6 +379,51 @@
                     <span class="printbutler-shutdown-result" data-bind="visible: shutdownBusy">
                         {{ _("Shutdown in progress...") }}
                     </span>
+                </div>
+            </div>
+
+            <hr style="margin:14px 0 10px;">
+            <p class="printbutler-section-heading">{{ _("Auto-Shutdown When Cool") }}</p>
+            <p class="muted">
+                {{ _("After a print finishes, watch the bed and nozzle temperature; once both stay below their thresholds continuously for the confirm time (and the printer isn't printing), trigger Safe Shutdown automatically - same as pressing the button above.") }}
+            </p>
+
+            <div class="control-group">
+                <div class="controls">
+                    <label class="checkbox">
+                        <input type="checkbox" data-bind="checked: settings.auto_shutdown_enabled, enable: settings.shutdown_enabled">
+                        {{ _("Enable auto-shutdown when cool") }}
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Bed / Nozzle threshold (°C)") }}</label>
+                <div class="controls">
+                    <input type="number" step="0.1" style="width:80px; display:inline-block;"
+                           data-bind="value: settings.auto_shutdown_bed_threshold, enable: settings.auto_shutdown_enabled">
+                    <input type="number" step="0.1" style="width:80px; display:inline-block;"
+                           data-bind="value: settings.auto_shutdown_tool_threshold, enable: settings.auto_shutdown_enabled">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">{{ _("Confirm for (seconds)") }}</label>
+                <div class="controls">
+                    <input type="number" min="0" style="width:80px;"
+                           data-bind="value: settings.auto_shutdown_confirm_seconds, enable: settings.auto_shutdown_enabled">
+                    <span class="help-inline muted">{{ _("Both temperatures must stay at or below their threshold for this long before shutdown fires.") }}</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="controls">
+                    <p class="muted">
+                        {{ _("Controlled live by the power button in the top navigation bar - armed by default on every OctoPrint start; click it to disarm for the current session (e.g. to keep the printer on after this print).") }}
+                        {{ _("Currently:") }}
+                        <strong data-bind="visible: armed" style="color:#3c763d;">{{ _("Armed") }}</strong><!--
+                        --><strong data-bind="visible: !armed()" style="color:#a94442;">{{ _("Disarmed") }}</strong>
+                    </p>
                 </div>
             </div>
         </div>
@@ -391,6 +449,13 @@
                     <tr>
                         <td>{{ _("Quiet hours active now") }}</td>
                         <td data-bind="text: quietHoursText"></td>
+                    </tr>
+                    <tr>
+                        <td>{{ _("Auto-shutdown-when-cool") }}</td>
+                        <td>
+                            <span data-bind="visible: armed">{{ _("Armed") }}</span><!--
+                            --><span data-bind="visible: !armed()">{{ _("Disarmed") }}</span>
+                        </td>
                     </tr>
                 </tbody>
             </table>

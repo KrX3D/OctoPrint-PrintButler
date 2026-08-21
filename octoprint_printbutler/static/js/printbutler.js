@@ -29,6 +29,7 @@ $(function () {
         self.quietHoursActive   = ko.observable(null);
         self.shutdownRunning    = ko.observable(false);
         self.shutdownBusy       = ko.observable(false);
+        self.armed                = ko.observable(true);
         self.logs                = ko.observableArray([]);
         self.statusPolling       = null;
 
@@ -63,6 +64,12 @@ $(function () {
             return boolText(self.quietHoursActive(), tr("Yes"), tr("No"), tr("Unknown"));
         });
 
+        self.armedTooltip = ko.computed(function () {
+            return self.armed()
+                ? tr("PrintButler: auto-shutdown-when-cool is armed (click to disarm)")
+                : tr("PrintButler: auto-shutdown-when-cool is DISARMED (click to arm)");
+        });
+
         // -- Lifecycle -------------------------------------------------
 
         self.onBeforeBinding = function () {
@@ -85,6 +92,17 @@ $(function () {
             }
         };
 
+        self.onStartupComplete = function () {
+            self.refreshStatus();
+        };
+
+        self.onDataUpdaterPluginMessage = function (plugin, data) {
+            if (plugin !== "printbutler" || !data || !data.event) { return; }
+            if (data.event === "armed_changed") {
+                self.armed(data.armed === true);
+            }
+        };
+
         // -- API -------------------------------------------------------
 
         self.refreshStatus = function () {
@@ -98,6 +116,7 @@ $(function () {
                     self.quietHoursActive(data.quiet_hours_active === true);
                     self.shutdownRunning(data.shutdown_running === true);
                     self.shutdownBusy(data.shutdown_running === true);
+                    self.armed(data.auto_shutdown_armed !== false);
                     if (Array.isArray(data.logs)) {
                         self.logs(data.logs);
                         var el = document.getElementById("printbutler_log_area");
@@ -134,6 +153,17 @@ $(function () {
                 });
         };
 
+        self.toggleArmed = function () {
+            var next = !self.armed();
+            OctoPrint.simpleApiCommand("printbutler", "set_armed", {armed: next})
+                .done(function (data) {
+                    self.armed(data.armed === true);
+                })
+                .fail(function () {
+                    new PNotify({title: tr("PrintButler"), text: tr("Request failed."), type: "error"});
+                });
+        };
+
         self.clearLogs = function () {
             OctoPrint.simpleApiCommand("printbutler", "clear_logs", {})
                 .done(function () { self.logs([]); });
@@ -150,6 +180,6 @@ $(function () {
     OCTOPRINT_VIEWMODELS.push({
         construct:    PrintButlerViewModel,
         dependencies: ["settingsViewModel", "loginStateViewModel"],
-        elements:     ["#settings_plugin_printbutler"]
+        elements:     ["#settings_plugin_printbutler", "#navbar_plugin_printbutler"]
     });
 });
