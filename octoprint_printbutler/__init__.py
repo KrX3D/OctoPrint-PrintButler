@@ -40,6 +40,7 @@ class PrintButlerPlugin(
         self._this_printer_active = True
         self._peer_states = {}           # topic -> True/False
         self._shared_light_desired = None
+        self._shared_light_last_reassert = 0.0
 
         self._finish_revert_timer = None
         self._finish_light_off_timer = None
@@ -330,6 +331,15 @@ class PrintButlerPlugin(
             json_key=self._settings.get(["shared_light_state_json_key"]),
         )
         if self._shared_light_desired is True and val is False:
+            now = time.time()
+            if now - self._shared_light_last_reassert < 5:
+                # Zigbee2MQTT typically publishes an optimistic state update
+                # the instant it receives our /set command, then a second
+                # confirmed update once the physical device responds - mesh
+                # jitter between those can otherwise make our own re-assert
+                # look like it "failed" and retrigger itself repeatedly.
+                return
+            self._shared_light_last_reassert = now
             self._log("Shared light dropped out unexpectedly, re-asserting ON.", "WARNING")
             self._set_shared_light(True)
 
@@ -337,6 +347,12 @@ class PrintButlerPlugin(
         if not self._get_bool("shared_light_enabled"):
             return
         active = self._this_printer_active or any(self._peer_states.values())
+        if active == self._shared_light_desired:
+            # Nothing actually changed - Zigbee2MQTT devices republish their
+            # whole state object on every minor sensor tick (power/voltage
+            # readings drift), which would otherwise spam a same-value
+            # publish on every single one of those unrelated heartbeats.
+            return
         self._log(
             "Recompute shared light ({}): this_printer={} peers={} -> active={}".format(
                 reason, self._this_printer_active, self._peer_states, active
@@ -779,7 +795,7 @@ class PrintButlerPlugin(
 __plugin_name__         = "PrintButler"
 __plugin_identifier__   = "printbutler"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.2.0"
+__plugin_version__      = "0.2.1"
 __plugin_description__  = (
     "Print-finished notifications, light/plug automation, and safe shutdown - "
     "all driven from OctoPrint's own state over MQTT, configurable from the "
