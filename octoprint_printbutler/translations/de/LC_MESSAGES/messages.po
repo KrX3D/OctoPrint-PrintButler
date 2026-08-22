@@ -140,8 +140,11 @@ msgstr "Trigger-Topic (senden)"
 msgid "Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely."
 msgstr "Wird direkt vor dem Shutdown-Befehl gesendet. Richte eine Home-Assistant-Automatisierung auf dieses Topic aus, um die Stromversorgung sicher zu trennen."
 
-msgid "Trigger payload"
-msgstr "Trigger-Payload"
+msgid "Trigger payload (on / off)"
+msgstr "Trigger-Payload (an / aus)"
+
+msgid "\"On\" is published right before shutdown; \"off\" is published back on the next startup, so a retained topic doesn't stay stuck \"on\" and your automation gets a clean signal the host came back up."
+msgstr "\"An\" wird direkt vor dem Herunterfahren gesendet; \"aus\" wird beim nächsten Start wieder gesendet, damit ein retained Topic nicht dauerhaft auf \"an\" hängen bleibt und deine Automatisierung ein klares Signal bekommt, dass der Host wieder hochgefahren ist."
 
 msgid "Settle delay (seconds)"
 msgstr "Wartezeit vor dem Herunterfahren (Sekunden)"

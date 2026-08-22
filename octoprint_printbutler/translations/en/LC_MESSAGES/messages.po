@@ -140,8 +140,11 @@ msgstr "Trigger topic (publish)"
 msgid "Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely."
 msgstr "Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely."
 
-msgid "Trigger payload"
-msgstr "Trigger payload"
+msgid "Trigger payload (on / off)"
+msgstr "Trigger payload (on / off)"
+
+msgid "\"On\" is published right before shutdown; \"off\" is published back on the next startup, so a retained topic doesn't stay stuck \"on\" and your automation gets a clean signal the host came back up."
+msgstr "\"On\" is published right before shutdown; \"off\" is published back on the next startup, so a retained topic doesn't stay stuck \"on\" and your automation gets a clean signal the host came back up."
 
 msgid "Settle delay (seconds)"
 msgstr "Settle delay (seconds)"

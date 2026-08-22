@@ -326,11 +326,15 @@
             </div>
 
             <div class="control-group">
-                <label class="control-label">{{ _("Trigger payload") }}</label>
+                <label class="control-label">{{ _("Trigger payload (on / off)") }}</label>
                 <div class="controls">
                     <input type="text" style="width:150px; display:inline-block;"
                            data-bind="value: settings.shutdown_trigger_payload_on, enable: settings.shutdown_enabled"
                            placeholder="ON">
+                    <input type="text" style="width:150px; display:inline-block;"
+                           data-bind="value: settings.shutdown_trigger_payload_off, enable: settings.shutdown_enabled"
+                           placeholder="OFF">
+                    <span class="help-inline muted">{{ _("\"On\" is published right before shutdown; \"off\" is published back on the next startup, so a retained topic doesn't stay stuck \"on\" and your automation gets a clean signal the host came back up.") }}</span>
                 </div>
             </div>
 
