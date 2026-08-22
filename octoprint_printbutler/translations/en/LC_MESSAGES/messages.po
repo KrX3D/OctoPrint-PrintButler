@@ -179,8 +179,8 @@ msgstr "Shutdown in progress..."
 msgid "Auto-Shutdown When Cool"
 msgstr "Auto-Shutdown When Cool"
 
-msgid "After a print finishes, watch the bed and nozzle temperature; once both stay below their thresholds continuously for the confirm time (and the printer isn't printing), trigger Safe Shutdown automatically - same as pressing the button above."
-msgstr "After a print finishes, watch the bed and nozzle temperature; once both stay below their thresholds continuously for the confirm time (and the printer isn't printing), trigger Safe Shutdown automatically - same as pressing the button above."
+msgid "Continuously watches the bed and nozzle temperature - not just after a print - and once both stay below their thresholds for the confirm time while the printer isn't printing, triggers Safe Shutdown automatically, same as pressing the button above. This includes right after OctoPrint (re)starts if the printer is already idle and cool. It disarms itself once it fires (see below), and re-arms automatically the next time OctoPrint starts."
+msgstr "Continuously watches the bed and nozzle temperature - not just after a print - and once both stay below their thresholds for the confirm time while the printer isn't printing, triggers Safe Shutdown automatically, same as pressing the button above. This includes right after OctoPrint (re)starts if the printer is already idle and cool. It disarms itself once it fires (see below), and re-arms automatically the next time OctoPrint starts."
 
 msgid "Enable auto-shutdown when cool"
 msgstr "Enable auto-shutdown when cool"
@@ -268,6 +268,36 @@ msgstr "Could not start shutdown."
 
 msgid "Request failed."
 msgstr "Request failed."
+
+msgid "Test"
+msgstr "Test"
+
+msgid "Test (3s)"
+msgstr "Test (3s)"
+
+msgid "Show current state"
+msgstr "Show current state"
+
+msgid "Read-only - no MQTT is published, this just reports the last message received on the state topic."
+msgstr "Read-only - no MQTT is published, this just reports the last message received on the state topic."
+
+msgid "Test Trigger Only"
+msgstr "Test Trigger Only"
+
+msgid "Publishes the trigger topic so you can verify your automation reacts - does NOT run the shutdown command."
+msgstr "Publishes the trigger topic so you can verify your automation reacts - does NOT run the shutdown command."
+
+msgid "Currently counting down:"
+msgstr "Currently counting down:"
+
+msgid "{seconds}s"
+msgstr "{seconds}s"
+
+msgid "Done."
+msgstr "Done."
+
+msgid "Failed."
+msgstr "Failed."
 
 msgid "PrintButler: auto-shutdown-when-cool is armed (click to disarm)"
 msgstr "PrintButler: auto-shutdown-when-cool is armed (click to disarm)"

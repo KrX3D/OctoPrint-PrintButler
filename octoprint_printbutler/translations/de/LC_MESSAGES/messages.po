@@ -179,8 +179,8 @@ msgstr "Herunterfahren läuft ..."
 msgid "Auto-Shutdown When Cool"
 msgstr "Auto-Shutdown nach Abkühlen"
 
-msgid "After a print finishes, watch the bed and nozzle temperature; once both stay below their thresholds continuously for the confirm time (and the printer isn't printing), trigger Safe Shutdown automatically - same as pressing the button above."
-msgstr "Nach Druckende werden Bett- und Düsentemperatur überwacht; sobald beide durchgehend für die Bestätigungszeit unter ihrem Schwellwert bleiben (und der Drucker nicht druckt), wird automatisch sicheres Herunterfahren ausgelöst - genau wie beim Button oben."
+msgid "Continuously watches the bed and nozzle temperature - not just after a print - and once both stay below their thresholds for the confirm time while the printer isn't printing, triggers Safe Shutdown automatically, same as pressing the button above. This includes right after OctoPrint (re)starts if the printer is already idle and cool. It disarms itself once it fires (see below), and re-arms automatically the next time OctoPrint starts."
+msgstr "Überwacht durchgehend Bett- und Düsentemperatur - nicht nur nach einem Druck - und sobald beide für die Bestätigungszeit unter ihrem Schwellwert bleiben, während der Drucker nicht druckt, wird automatisch sicheres Herunterfahren ausgelöst, genau wie beim Button oben. Das gilt auch direkt nach einem (Neu-)Start von OctoPrint, falls der Drucker bereits im Leerlauf und kalt ist. Nach dem Auslösen deaktiviert es sich selbst (siehe unten) und wird beim nächsten OctoPrint-Start automatisch wieder aktiviert."
 
 msgid "Enable auto-shutdown when cool"
 msgstr "Auto-Shutdown nach Abkühlen aktivieren"
@@ -268,6 +268,36 @@ msgstr "Herunterfahren konnte nicht gestartet werden."
 
 msgid "Request failed."
 msgstr "Anfrage fehlgeschlagen."
+
+msgid "Test"
+msgstr "Testen"
+
+msgid "Test (3s)"
+msgstr "Testen (3s)"
+
+msgid "Show current state"
+msgstr "Aktuellen Status anzeigen"
+
+msgid "Read-only - no MQTT is published, this just reports the last message received on the state topic."
+msgstr "Nur lesend - es wird nichts per MQTT gesendet, es wird nur die zuletzt empfangene Nachricht des Status-Topics angezeigt."
+
+msgid "Test Trigger Only"
+msgstr "Nur Trigger testen"
+
+msgid "Publishes the trigger topic so you can verify your automation reacts - does NOT run the shutdown command."
+msgstr "Sendet das Trigger-Topic, damit du prüfen kannst, ob deine Automatisierung reagiert - der Shutdown-Befehl wird NICHT ausgeführt."
+
+msgid "Currently counting down:"
+msgstr "Läuft gerade ab:"
+
+msgid "{seconds}s"
+msgstr "{seconds}s"
+
+msgid "Done."
+msgstr "Fertig."
+
+msgid "Failed."
+msgstr "Fehlgeschlagen."
 
 msgid "PrintButler: auto-shutdown-when-cool is armed (click to disarm)"
 msgstr "PrintButler: Auto-Shutdown nach Abkühlen ist aktiv (klicken zum Deaktivieren)"
