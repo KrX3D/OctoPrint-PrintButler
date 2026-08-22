@@ -105,6 +105,7 @@ class PrintButlerPlugin(
             shutdown_command="sudo shutdown -h now",
             shutdown_trigger_topic="",
             shutdown_trigger_payload_on="ON",
+            shutdown_trigger_payload_off="OFF",
             shutdown_trigger_qos=1,
             shutdown_trigger_retain=False,
             shutdown_trigger_settle_seconds=3,
@@ -182,6 +183,9 @@ class PrintButlerPlugin(
 
         if self._get_bool("shared_light_enabled"):
             self._recompute_shared_light(reason="startup")
+
+        if self._settings.get(["shutdown_trigger_topic"]):
+            self._set_shutdown_trigger(False)
 
         threading.Thread(
             target=self._cooldown_loop, name="printbutler-cooldown", daemon=True
@@ -448,7 +452,7 @@ class PrintButlerPlugin(
                 self._recompute_shared_light(reason="shutdown")
 
             if self._settings.get(["shutdown_trigger_topic"]):
-                self._publish_shutdown_trigger()
+                self._set_shutdown_trigger(True)
                 settle = int(self._settings.get(["shutdown_trigger_settle_seconds"]) or 0)
                 if settle > 0:
                     self._log("Waiting {}s for the trigger to leave the host...".format(settle))
@@ -474,7 +478,13 @@ class PrintButlerPlugin(
             self._shutdown_running = False
             self._shutdown_lock.release()
 
-    def _publish_shutdown_trigger(self, overrides=None):
+    def _set_shutdown_trigger(self, on, overrides=None):
+        """
+        Published ON right before Safe Shutdown runs, and reset back to OFF
+        here on the next startup - so a retained topic doesn't get stuck
+        "ON" forever, and any automation watching it gets a clean signal
+        that this host came back up.
+        """
         overrides = overrides or {}
         topic = overrides.get("topic") or self._settings.get(["shutdown_trigger_topic"])
         if not topic:
@@ -483,11 +493,17 @@ class PrintButlerPlugin(
                    else self._settings.get(["shutdown_trigger_qos"]) or 0)
         retain = bool(overrides.get("retain") if "retain" in overrides
                       else self._get_bool("shutdown_trigger_retain"))
-        payload = overrides.get("payload_on") or self._settings.get(["shutdown_trigger_payload_on"]) or "ON"
+        if on:
+            payload = overrides.get("payload_on") or self._settings.get(["shutdown_trigger_payload_on"]) or "ON"
+        else:
+            payload = overrides.get("payload_off") or self._settings.get(["shutdown_trigger_payload_off"]) or "OFF"
         self._log(
-            "Publishing shutdown trigger -> {} = {} (an external automation is "
-            "expected to cut mains power once it confirms this host is actually "
-            "down).".format(topic, payload)
+            "Publishing shutdown trigger -> {} = {}{}".format(
+                topic, payload,
+                " (an external automation is expected to cut mains power once "
+                "it confirms this host is actually down)." if on
+                else " (reset after startup)."
+            )
         )
         return self._mqtt_publish(topic, payload, qos=qos, retain=retain)
 
@@ -659,7 +675,7 @@ class PrintButlerPlugin(
             })
 
         elif command == "test_shutdown_trigger":
-            if not self._publish_shutdown_trigger(overrides=data):
+            if not self._set_shutdown_trigger(True, overrides=data):
                 return flask.jsonify({
                     "success": False,
                     "message": "No trigger topic configured - fill in the field first.",
@@ -763,7 +779,7 @@ class PrintButlerPlugin(
 __plugin_name__         = "PrintButler"
 __plugin_identifier__   = "printbutler"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.1.0"
+__plugin_version__      = "0.2.0"
 __plugin_description__  = (
     "Print-finished notifications, light/plug automation, and safe shutdown - "
     "all driven from OctoPrint's own state over MQTT, configurable from the "
