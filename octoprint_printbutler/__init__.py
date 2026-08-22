@@ -585,12 +585,12 @@ class PrintButlerPlugin(
                 return flask.jsonify({
                     "success": False,
                     "message": "Safe shutdown is disabled in settings.",
-                }), 400
+                })
             if self._shutdown_running:
                 return flask.jsonify({
                     "success": False,
                     "message": "A shutdown is already in progress.",
-                }), 409
+                })
             t = threading.Thread(
                 target=self._do_safe_shutdown, name="printbutler-shutdown", daemon=True
             )
@@ -620,7 +620,7 @@ class PrintButlerPlugin(
             if not self._settings.get(["finish_topic"]):
                 return flask.jsonify({
                     "success": False, "message": "No finish topic configured.",
-                }), 400
+                })
             self._publish_finish_notify()
             return flask.jsonify({"success": True, "message": "Finish notification published."})
 
@@ -628,7 +628,7 @@ class PrintButlerPlugin(
             if not self._settings.get(["finish_light_topic"]):
                 return flask.jsonify({
                     "success": False, "message": "No finish light topic configured.",
-                }), 400
+                })
             self._set_finish_light(True)
             t = threading.Timer(3, lambda: self._set_finish_light(False))
             t.daemon = True
@@ -639,7 +639,7 @@ class PrintButlerPlugin(
             if not self._settings.get(["shared_light_set_topic"]):
                 return flask.jsonify({
                     "success": False, "message": "No shared light set topic configured.",
-                }), 400
+                })
             self._set_shared_light(True)
             t = threading.Timer(3, lambda: self._set_shared_light(False))
             t.daemon = True
@@ -650,7 +650,7 @@ class PrintButlerPlugin(
             if not self._settings.get(["shutdown_trigger_topic"]):
                 return flask.jsonify({
                     "success": False, "message": "No trigger topic configured.",
-                }), 400
+                })
             self._publish_shutdown_trigger()
             return flask.jsonify({
                 "success": True,
