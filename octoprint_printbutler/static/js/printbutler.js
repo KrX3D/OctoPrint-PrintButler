@@ -30,8 +30,16 @@ $(function () {
         self.shutdownRunning    = ko.observable(false);
         self.shutdownBusy       = ko.observable(false);
         self.armed                = ko.observable(true);
+        self.cooldownCounting          = ko.observable(false);
+        self.cooldownSecondsRemaining  = ko.observable(null);
         self.logs                = ko.observableArray([]);
         self.statusPolling       = null;
+
+        self.testFinishNotifyBusy   = ko.observable(false);
+        self.testFinishLightBusy    = ko.observable(false);
+        self.testSharedLightBusy    = ko.observable(false);
+        self.testShutdownTriggerBusy = ko.observable(false);
+        self.testPlugStateBusy      = ko.observable(false);
 
         // settings is set in onBeforeBinding - null until then.
         self.settings = null;
@@ -72,6 +80,11 @@ $(function () {
                     && (autoOn === true || autoOn === "true");
             }
             catch (e) { return false; }
+        });
+
+        self.cooldownSecondsText = ko.computed(function () {
+            var s = self.cooldownSecondsRemaining();
+            return s === null ? "" : tr("{seconds}s").replace("{seconds}", s);
         });
 
         self.armedTooltip = ko.computed(function () {
@@ -127,6 +140,12 @@ $(function () {
                     self.shutdownRunning(data.shutdown_running === true);
                     self.shutdownBusy(data.shutdown_running === true);
                     self.armed(data.auto_shutdown_armed !== false);
+                    self.cooldownCounting(data.cooldown_counting === true);
+                    self.cooldownSecondsRemaining(
+                        typeof data.cooldown_seconds_remaining === "number"
+                            ? data.cooldown_seconds_remaining
+                            : null
+                    );
                     if (Array.isArray(data.logs)) {
                         self.logs(data.logs);
                         var el = document.getElementById("printbutler_log_area");
@@ -173,6 +192,30 @@ $(function () {
                     new PNotify({title: tr("PrintButler"), text: tr("Request failed."), type: "error"});
                 });
         };
+
+        self._runTest = function (command, busyObservable) {
+            if (busyObservable()) { return; }
+            busyObservable(true);
+            OctoPrint.simpleApiCommand("printbutler", command, {})
+                .done(function (data) {
+                    new PNotify({
+                        title: tr("PrintButler"),
+                        text: data.message || (data.success ? tr("Done.") : tr("Failed.")),
+                        type: data.success ? "success" : "error",
+                        hide: true
+                    });
+                })
+                .fail(function () {
+                    new PNotify({title: tr("PrintButler"), text: tr("Request failed."), type: "error"});
+                })
+                .always(function () { busyObservable(false); });
+        };
+
+        self.testFinishNotify = function () { self._runTest("test_finish_notify", self.testFinishNotifyBusy); };
+        self.testFinishLight  = function () { self._runTest("test_finish_light", self.testFinishLightBusy); };
+        self.testSharedLight  = function () { self._runTest("test_shared_light", self.testSharedLightBusy); };
+        self.testShutdownTrigger = function () { self._runTest("test_shutdown_trigger", self.testShutdownTriggerBusy); };
+        self.testPlugState    = function () { self._runTest("test_plug_state", self.testPlugStateBusy); };
 
         self.clearLogs = function () {
             OctoPrint.simpleApiCommand("printbutler", "clear_logs", {})

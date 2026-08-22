@@ -87,6 +87,15 @@
                 </div>
             </div>
 
+            <div class="control-group">
+                <div class="controls">
+                    <button class="btn btn-small"
+                            data-bind="click: testFinishNotify, enable: settings.finish_enabled() && !testFinishNotifyBusy(), css: {disabled: testFinishNotifyBusy}">
+                        <i class="fa fa-flask"></i> {{ _("Test") }}
+                    </button>
+                </div>
+            </div>
+
             <hr style="margin:14px 0 10px;">
             <p class="printbutler-section-heading">{{ _("Quiet Hours") }}</p>
             <p class="muted">
@@ -177,6 +186,15 @@
                     <span class="help-inline muted">{{ _("0 = leave it on until the next print starts.") }}</span>
                 </div>
             </div>
+
+            <div class="control-group">
+                <div class="controls">
+                    <button class="btn btn-small"
+                            data-bind="click: testFinishLight, enable: settings.finish_light_enabled() && !testFinishLightBusy(), css: {disabled: testFinishLightBusy}">
+                        <i class="fa fa-flask"></i> {{ _("Test (3s)") }}
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- ============================== Printer Plug ============================== -->
@@ -214,6 +232,16 @@
                            data-bind="value: settings.plug_state_json_key, enable: settings.plug_enabled"
                            placeholder="state">
                     <span class="help-inline muted">{{ _("Value, then the JSON field to read it from (leave the field blank for a plain-text payload).") }}</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="controls">
+                    <button class="btn btn-small"
+                            data-bind="click: testPlugState, enable: settings.plug_enabled() && !testPlugStateBusy(), css: {disabled: testPlugStateBusy}">
+                        <i class="fa fa-flask"></i> {{ _("Show current state") }}
+                    </button>
+                    <span class="help-inline muted">{{ _("Read-only - no MQTT is published, this just reports the last message received on the state topic.") }}</span>
                 </div>
             </div>
         </div>
@@ -300,6 +328,15 @@
                     <span class="help-inline muted">{{ _("One MQTT topic per line, plus the \"on\" value and the JSON field to read it from (blank = plain-text payload). Same format assumed for all peers.") }}</span>
                 </div>
             </div>
+
+            <div class="control-group">
+                <div class="controls">
+                    <button class="btn btn-small"
+                            data-bind="click: testSharedLight, enable: settings.shared_light_enabled() && !testSharedLightBusy(), css: {disabled: testSharedLightBusy}">
+                        <i class="fa fa-flask"></i> {{ _("Test (3s)") }}
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- ============================== Safe Shutdown ============================== -->
@@ -374,6 +411,16 @@
 
             <div class="control-group">
                 <div class="controls">
+                    <button class="btn btn-small"
+                            data-bind="click: testShutdownTrigger, enable: settings.shutdown_enabled() && !testShutdownTriggerBusy(), css: {disabled: testShutdownTriggerBusy}">
+                        <i class="fa fa-flask"></i> {{ _("Test Trigger Only") }}
+                    </button>
+                    <span class="help-inline muted">{{ _("Publishes the trigger topic so you can verify your automation reacts - does NOT run the shutdown command.") }}</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="controls">
                     <button class="btn btn-danger"
                             data-bind="click: shutdownNow, enable: settings.shutdown_enabled() && !shutdownBusy(), css: {disabled: shutdownBusy}">
                         <i class="fa fa-power-off"></i> {{ _("Shutdown Printer Now") }}
@@ -387,7 +434,7 @@
             <hr style="margin:14px 0 10px;">
             <p class="printbutler-section-heading">{{ _("Auto-Shutdown When Cool") }}</p>
             <p class="muted">
-                {{ _("After a print finishes, watch the bed and nozzle temperature; once both stay below their thresholds continuously for the confirm time (and the printer isn't printing), trigger Safe Shutdown automatically - same as pressing the button above.") }}
+                {{ _("Continuously watches the bed and nozzle temperature - not just after a print - and once both stay below their thresholds for the confirm time while the printer isn't printing, triggers Safe Shutdown automatically, same as pressing the button above. This includes right after OctoPrint (re)starts if the printer is already idle and cool. It disarms itself once it fires (see below), and re-arms automatically the next time OctoPrint starts.") }}
             </p>
 
             <div class="control-group">
@@ -426,6 +473,9 @@
                         <strong data-bind="visible: armed" style="color:#3c763d;">{{ _("Armed") }}</strong><!--
                         --><strong data-bind="visible: !armed()" style="color:#a94442;">{{ _("Disarmed") }}</strong>
                     </p>
+                    <p class="muted" data-bind="visible: cooldownCounting">
+                        {{ _("Currently counting down:") }} <strong data-bind="text: cooldownSecondsText"></strong>
+                    </p>
                 </div>
             </div>
         </div>
@@ -456,7 +506,8 @@
                         <td>{{ _("Auto-shutdown-when-cool") }}</td>
                         <td>
                             <span data-bind="visible: armed">{{ _("Armed") }}</span><!--
-                            --><span data-bind="visible: !armed()">{{ _("Disarmed") }}</span>
+                            --><span data-bind="visible: !armed()">{{ _("Disarmed") }}</span><!--
+                            --><span data-bind="visible: cooldownCounting"> - <span data-bind="text: cooldownSecondsText"></span></span>
                         </td>
                     </tr>
                 </tbody>

@@ -42,8 +42,8 @@ class PrintButlerPlugin(
         self._shutdown_lock = threading.Lock()
         self._shutdown_running = False
 
-        self._cooldown_thread = None
-        self._cooldown_stop = None
+        self._cooldown_stop = threading.Event()
+        self._cooldown_since = None   # timestamp, or None when not currently counting down
         # Auto-shutdown-when-cool arm/disarm - live, in-memory, resets to
         # armed on every OctoPrint start (see the navbar toggle).
         self._auto_shutdown_armed = True
@@ -184,6 +184,10 @@ class PrintButlerPlugin(
             )
             self._rewire_mqtt()
 
+        threading.Thread(
+            target=self._cooldown_loop, name="printbutler-cooldown", daemon=True
+        ).start()
+
     # -- EventHandlerPlugin ------------------------------------------------
 
     def on_event(self, event, payload):
@@ -222,10 +226,7 @@ class PrintButlerPlugin(
         if self._get_bool("shared_light_enabled") and not quiet:
             self._recompute_shared_light(reason="print_done")
 
-        self._start_cooldown_watch()
-
     def _handle_print_started(self):
-        self._stop_cooldown_watch()
         if self._get_bool("finish_light_enabled"):
             self._cancel_timer("_finish_light_off_timer")
             self._set_finish_light(False)
@@ -443,20 +444,10 @@ class PrintButlerPlugin(
         try:
             self._log("=" * 60)
             self._log("Safe shutdown requested.")
-            self._stop_cooldown_watch()
+            self._cooldown_since = None
 
-            trigger_topic = self._settings.get(["shutdown_trigger_topic"])
-            if trigger_topic:
-                qos = int(self._settings.get(["shutdown_trigger_qos"]) or 0)
-                retain = self._get_bool("shutdown_trigger_retain")
-                payload = self._settings.get(["shutdown_trigger_payload_on"]) or "ON"
-                self._log(
-                    "Publishing shutdown trigger -> {} = {} (an external "
-                    "automation is expected to cut mains power once it "
-                    "confirms this host is actually down).".format(trigger_topic, payload)
-                )
-                self._mqtt_publish(trigger_topic, payload, qos=qos, retain=retain)
-
+            if self._settings.get(["shutdown_trigger_topic"]):
+                self._publish_shutdown_trigger()
                 settle = int(self._settings.get(["shutdown_trigger_settle_seconds"]) or 0)
                 if settle > 0:
                     self._log("Waiting {}s for the trigger to leave the host...".format(settle))
@@ -482,84 +473,95 @@ class PrintButlerPlugin(
             self._shutdown_running = False
             self._shutdown_lock.release()
 
+    def _publish_shutdown_trigger(self):
+        topic = self._settings.get(["shutdown_trigger_topic"])
+        if not topic:
+            return False
+        qos = int(self._settings.get(["shutdown_trigger_qos"]) or 0)
+        retain = self._get_bool("shutdown_trigger_retain")
+        payload = self._settings.get(["shutdown_trigger_payload_on"]) or "ON"
+        self._log(
+            "Publishing shutdown trigger -> {} = {} (an external automation is "
+            "expected to cut mains power once it confirms this host is actually "
+            "down).".format(topic, payload)
+        )
+        return self._mqtt_publish(topic, payload, qos=qos, retain=retain)
+
     # -- Auto-shutdown when cool ------------------------------------------------
 
-    def _start_cooldown_watch(self):
-        if not self._get_bool("auto_shutdown_enabled"):
-            return
-        if not self._get_bool("shutdown_enabled"):
-            self._log(
-                "Auto-shutdown-when-cool skipped - Safe Shutdown itself is disabled.",
-                "WARNING",
-            )
-            return
-        if not self._auto_shutdown_armed:
-            self._log("Auto-shutdown-when-cool skipped - disarmed via the navbar toggle.")
-            return
+    def _cooldown_loop(self):
+        """
+        Runs for the plugin's whole lifetime, checked every ~10s. Mirrors a
+        plain "temperature below X for N minutes, and not printing" trigger -
+        it does not require a print to have just finished, matching the
+        original Home Assistant automation's actual behavior. This means it
+        starts counting immediately whenever armed+enabled+idle+cool, which
+        includes right after OctoPrint (re)starts if the printer already is.
+        Auto-disarms itself after firing so it does not immediately loop.
+        """
+        was_active = None
+        while not self._cooldown_stop.is_set():
+            self._cooldown_stop.wait(10)
+            if self._cooldown_stop.is_set():
+                break
 
-        self._stop_cooldown_watch()
-        stop_event = threading.Event()
-        self._cooldown_stop = stop_event
-        self._cooldown_thread = threading.Thread(
-            target=self._cooldown_loop, args=(stop_event,),
-            name="printbutler-cooldown", daemon=True,
-        )
-        self._cooldown_thread.start()
+            try:
+                active = (
+                    self._get_bool("auto_shutdown_enabled")
+                    and self._get_bool("shutdown_enabled")
+                    and self._auto_shutdown_armed
+                )
+                if active != was_active:
+                    self._log("Cooldown watch {}.".format("active" if active else "inactive"))
+                    was_active = active
+                if not active:
+                    self._cooldown_since = None
+                    continue
 
-    def _stop_cooldown_watch(self):
-        if self._cooldown_stop is not None:
-            self._cooldown_stop.set()
-        self._cooldown_stop = None
-        self._cooldown_thread = None
+                if self._printer.is_printing() or self._printer.is_paused():
+                    if self._cooldown_since is not None:
+                        self._log("Cooldown watch reset - printer is active.")
+                    self._cooldown_since = None
+                    continue
 
-    def _cooldown_loop(self, stop_event):
-        bed_thresh = float(self._settings.get(["auto_shutdown_bed_threshold"]) or 40)
-        tool_thresh = float(self._settings.get(["auto_shutdown_tool_threshold"]) or 40)
-        confirm_secs = int(self._settings.get(["auto_shutdown_confirm_seconds"]) or 60)
-        self._log(
-            "Cooldown watch started (bed<={} tool<={}, sustained for {}s).".format(
-                bed_thresh, tool_thresh, confirm_secs
-            )
-        )
+                bed_thresh = float(self._settings.get(["auto_shutdown_bed_threshold"]) or 40)
+                tool_thresh = float(self._settings.get(["auto_shutdown_tool_threshold"]) or 40)
+                confirm_secs = int(self._settings.get(["auto_shutdown_confirm_seconds"]) or 60)
 
-        cool_since = None
-        while not stop_event.is_set():
-            if self._printer.is_printing() or self._printer.is_paused():
-                self._log("Cooldown watch stopped - printer is active again.")
-                return
-            if not self._auto_shutdown_armed:
-                self._log("Cooldown watch stopped - disarmed via the navbar toggle.")
-                return
+                temps = self._printer.get_current_temperatures() or {}
+                bed = (temps.get("bed") or {}).get("actual")
+                tool0 = (temps.get("tool0") or {}).get("actual")
+                is_cool = (
+                    bed is not None and bed <= bed_thresh
+                    and tool0 is not None and tool0 <= tool_thresh
+                )
 
-            temps = self._printer.get_current_temperatures() or {}
-            bed = (temps.get("bed") or {}).get("actual")
-            tool0 = (temps.get("tool0") or {}).get("actual")
-            is_cool = (
-                bed is not None and bed <= bed_thresh
-                and tool0 is not None and tool0 <= tool_thresh
-            )
-
-            now = time.time()
-            if is_cool:
-                if cool_since is None:
-                    cool_since = now
-                    self._log(
-                        "Bed/nozzle below threshold (bed={} tool={}), confirming "
-                        "for {}s...".format(bed, tool0, confirm_secs)
-                    )
-                elif now - cool_since >= confirm_secs:
-                    self._log("Cooldown confirmed - triggering safe shutdown.")
-                    threading.Thread(
-                        target=self._do_safe_shutdown, name="printbutler-autoshutdown",
-                        daemon=True,
-                    ).start()
-                    return
-            else:
-                if cool_since is not None:
-                    self._log("Temperature rose again, resetting cooldown timer.")
-                cool_since = None
-
-            stop_event.wait(10)
+                now = time.time()
+                if is_cool:
+                    if self._cooldown_since is None:
+                        self._cooldown_since = now
+                        self._log(
+                            "Bed/nozzle below threshold (bed={} tool={}), confirming "
+                            "for {}s...".format(bed, tool0, confirm_secs)
+                        )
+                    elif now - self._cooldown_since >= confirm_secs:
+                        self._log("Cooldown confirmed - triggering safe shutdown, disarming.")
+                        self._cooldown_since = None
+                        self._auto_shutdown_armed = False
+                        self._plugin_manager.send_plugin_message(
+                            self._identifier,
+                            {"event": "armed_changed", "armed": False},
+                        )
+                        threading.Thread(
+                            target=self._do_safe_shutdown, name="printbutler-autoshutdown",
+                            daemon=True,
+                        ).start()
+                else:
+                    if self._cooldown_since is not None:
+                        self._log("Temperature rose again, resetting cooldown timer.")
+                    self._cooldown_since = None
+            except Exception:
+                self._logger.exception("Cooldown watch loop error")
 
     # -- SimpleApiPlugin -------------------------------------------------------
 
@@ -568,6 +570,11 @@ class PrintButlerPlugin(
             shutdown_now=[],
             clear_logs=[],
             set_armed=["armed"],
+            test_finish_notify=[],
+            test_finish_light=[],
+            test_shared_light=[],
+            test_shutdown_trigger=[],
+            test_plug_state=[],
         )
 
     def on_api_command(self, command, data):
@@ -601,15 +608,61 @@ class PrintButlerPlugin(
                     "armed" if self._auto_shutdown_armed else "disarmed"
                 )
             )
-            if self._auto_shutdown_armed:
-                self._start_cooldown_watch()
-            else:
-                self._stop_cooldown_watch()
+            if not self._auto_shutdown_armed:
+                self._cooldown_since = None
             self._plugin_manager.send_plugin_message(
                 self._identifier,
                 {"event": "armed_changed", "armed": self._auto_shutdown_armed},
             )
             return flask.jsonify({"success": True, "armed": self._auto_shutdown_armed})
+
+        elif command == "test_finish_notify":
+            if not self._settings.get(["finish_topic"]):
+                return flask.jsonify({
+                    "success": False, "message": "No finish topic configured.",
+                }), 400
+            self._publish_finish_notify()
+            return flask.jsonify({"success": True, "message": "Finish notification published."})
+
+        elif command == "test_finish_light":
+            if not self._settings.get(["finish_light_topic"]):
+                return flask.jsonify({
+                    "success": False, "message": "No finish light topic configured.",
+                }), 400
+            self._set_finish_light(True)
+            t = threading.Timer(3, lambda: self._set_finish_light(False))
+            t.daemon = True
+            t.start()
+            return flask.jsonify({"success": True, "message": "Finish light switched on for 3s."})
+
+        elif command == "test_shared_light":
+            if not self._settings.get(["shared_light_set_topic"]):
+                return flask.jsonify({
+                    "success": False, "message": "No shared light set topic configured.",
+                }), 400
+            self._set_shared_light(True)
+            t = threading.Timer(3, lambda: self._set_shared_light(False))
+            t.daemon = True
+            t.start()
+            return flask.jsonify({"success": True, "message": "Shared light switched on for 3s."})
+
+        elif command == "test_shutdown_trigger":
+            if not self._settings.get(["shutdown_trigger_topic"]):
+                return flask.jsonify({
+                    "success": False, "message": "No trigger topic configured.",
+                }), 400
+            self._publish_shutdown_trigger()
+            return flask.jsonify({
+                "success": True,
+                "message": "Trigger topic published (shutdown command was NOT run).",
+            })
+
+        elif command == "test_plug_state":
+            if self._plug_state is None:
+                msg = "No message received on the state topic yet."
+            else:
+                msg = "Last known state: {}".format("ON" if self._plug_state else "OFF")
+            return flask.jsonify({"success": True, "message": msg})
 
         return flask.abort(400)
 
@@ -617,6 +670,12 @@ class PrintButlerPlugin(
         mqtt_helper_present = bool(
             self._mqtt_helpers and "mqtt_publish" in self._mqtt_helpers
         )
+        cooldown_seconds_remaining = None
+        if self._cooldown_since is not None:
+            confirm_secs = int(self._settings.get(["auto_shutdown_confirm_seconds"]) or 60)
+            cooldown_seconds_remaining = max(
+                0, int(confirm_secs - (time.time() - self._cooldown_since))
+            )
         return flask.jsonify(dict(
             plugin_version=self._plugin_version,
             mqtt_helper_present=mqtt_helper_present,
@@ -627,7 +686,8 @@ class PrintButlerPlugin(
             quiet_hours_active=self._in_quiet_hours(),
             shutdown_running=self._shutdown_running,
             auto_shutdown_armed=self._auto_shutdown_armed,
-            cooldown_watching=bool(self._cooldown_thread and self._cooldown_thread.is_alive()),
+            cooldown_counting=self._cooldown_since is not None,
+            cooldown_seconds_remaining=cooldown_seconds_remaining,
             logs=list(self._log_entries),
         ))
 
