@@ -23,9 +23,6 @@ msgstr "Druck fertig"
 msgid "Finish Light"
 msgstr "Fertig-Licht"
 
-msgid "Printer Plug"
-msgstr "Drucker-Steckdose"
-
 msgid "Shared Light"
 msgstr "Gemeinsames Licht"
 
@@ -95,24 +92,6 @@ msgstr "Ausschalten nach (Sekunden)"
 msgid "0 = leave it on until the next print starts."
 msgstr "0 = an lassen, bis der nächste Druck startet."
 
-msgid "This Printer's Power Plug"
-msgstr "Steckdose dieses Druckers"
-
-msgid "The smart plug/switch powering this printer's mains. PrintButler only reads its state here (used by the Shared Light tab below) - actually cutting power after Safe Shutdown is handled externally, see the Safe Shutdown tab."
-msgstr "Die Smart-Steckdose/der Schalter, der diesen Drucker mit Strom versorgt. PrintButler liest hier nur deren Status (wird für den Tab \"Gemeinsames Licht\" weiter unten genutzt) - das eigentliche Abschalten nach dem sicheren Herunterfahren erfolgt extern, siehe Tab \"Sicheres Herunterfahren\"."
-
-msgid "Track this printer's power plug state"
-msgstr "Status der Steckdose dieses Druckers überwachen"
-
-msgid "State topic (subscribe)"
-msgstr "Status-Topic (abonnieren)"
-
-msgid "\"On\" value"
-msgstr "Wert für \"an\""
-
-msgid "Value, then the JSON field to read it from (leave the field blank for a plain-text payload)."
-msgstr "Wert, danach das JSON-Feld, aus dem er gelesen wird (Feld leer lassen für reinen Text-Payload)."
-
 msgid "Set topic (publish)"
 msgstr "Steuer-Topic (senden)"
 
@@ -125,8 +104,8 @@ msgstr "Steuer-Payload (an / aus)"
 msgid "Shared Work Light"
 msgstr "Gemeinsames Arbeitslicht"
 
-msgid "A light/relay shared across multiple printers, kept on as long as THIS printer's plug (above) OR any peer printer's topic reports \"on\". Each PrintButler instance runs this independently - list the other printers' plug state topics as peers."
-msgstr "Ein Licht/Relais, das sich mehrere Drucker teilen. Es bleibt an, solange die Steckdose DIESES Druckers (oben) ODER das Topic eines anderen Druckers \"an\" meldet. Jede PrintButler-Instanz macht das unabhängig - trage die Status-Topics der anderen Drucker-Steckdosen als Peers ein."
+msgid "A light/relay shared across multiple printers, kept on as long as THIS printer (i.e. this PrintButler/OctoPrint instance is running - it shares power with the printer, so \"running\" already means \"powered\") OR any peer printer's topic reports \"on\". Each PrintButler instance runs this independently - list the other printers' plug state topics as peers."
+msgstr "Ein Licht/Relais, das sich mehrere Drucker teilen. Es bleibt an, solange DIESER Drucker läuft (diese PrintButler/OctoPrint-Instanz teilt sich die Stromversorgung mit dem Drucker, \"läuft\" bedeutet also bereits \"ist eingeschaltet\") ODER das Topic eines anderen Druckers \"an\" meldet. Jede PrintButler-Instanz macht das unabhängig - trage die Status-Topics der anderen Drucker-Steckdosen als Peers ein."
 
 msgid "Keep the shared light on while any tracked printer is powered"
 msgstr "Gemeinsames Licht an lassen, solange irgendein überwachter Drucker eingeschaltet ist"
@@ -212,8 +191,8 @@ msgstr "Live-Status"
 msgid "MQTT helper"
 msgstr "MQTT-Verbindung"
 
-msgid "This printer's plug"
-msgstr "Steckdose dieses Druckers"
+msgid "This printer"
+msgstr "Dieser Drucker"
 
 msgid "Shared light desired state"
 msgstr "Sollzustand gemeinsames Licht"
@@ -274,12 +253,6 @@ msgstr "Testen"
 
 msgid "Test (3s)"
 msgstr "Testen (3s)"
-
-msgid "Show current state"
-msgstr "Aktuellen Status anzeigen"
-
-msgid "Read-only - no MQTT is published, this just reports the last message received on the state topic. Unlike the other Test buttons, this needs Save first since it reads from an active subscription."
-msgstr "Nur lesend - es wird nichts per MQTT gesendet, es wird nur die zuletzt empfangene Nachricht des Status-Topics angezeigt. Anders als die übrigen Test-Buttons braucht dieser vorher ein Save, da er auf ein aktives Abonnement angewiesen ist."
 
 msgid "Test Trigger Only"
 msgstr "Nur Trigger testen"

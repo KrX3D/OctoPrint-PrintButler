@@ -23,9 +23,6 @@ msgstr "Print Finished"
 msgid "Finish Light"
 msgstr "Finish Light"
 
-msgid "Printer Plug"
-msgstr "Printer Plug"
-
 msgid "Shared Light"
 msgstr "Shared Light"
 
@@ -95,24 +92,6 @@ msgstr "Turn off after (seconds)"
 msgid "0 = leave it on until the next print starts."
 msgstr "0 = leave it on until the next print starts."
 
-msgid "This Printer's Power Plug"
-msgstr "This Printer's Power Plug"
-
-msgid "The smart plug/switch powering this printer's mains. PrintButler only reads its state here (used by the Shared Light tab below) - actually cutting power after Safe Shutdown is handled externally, see the Safe Shutdown tab."
-msgstr "The smart plug/switch powering this printer's mains. PrintButler only reads its state here (used by the Shared Light tab below) - actually cutting power after Safe Shutdown is handled externally, see the Safe Shutdown tab."
-
-msgid "Track this printer's power plug state"
-msgstr "Track this printer's power plug state"
-
-msgid "State topic (subscribe)"
-msgstr "State topic (subscribe)"
-
-msgid "\"On\" value"
-msgstr "\"On\" value"
-
-msgid "Value, then the JSON field to read it from (leave the field blank for a plain-text payload)."
-msgstr "Value, then the JSON field to read it from (leave the field blank for a plain-text payload)."
-
 msgid "Set topic (publish)"
 msgstr "Set topic (publish)"
 
@@ -125,8 +104,8 @@ msgstr "Set payload (on / off)"
 msgid "Shared Work Light"
 msgstr "Shared Work Light"
 
-msgid "A light/relay shared across multiple printers, kept on as long as THIS printer's plug (above) OR any peer printer's topic reports \"on\". Each PrintButler instance runs this independently - list the other printers' plug state topics as peers."
-msgstr "A light/relay shared across multiple printers, kept on as long as THIS printer's plug (above) OR any peer printer's topic reports \"on\". Each PrintButler instance runs this independently - list the other printers' plug state topics as peers."
+msgid "A light/relay shared across multiple printers, kept on as long as THIS printer (i.e. this PrintButler/OctoPrint instance is running - it shares power with the printer, so \"running\" already means \"powered\") OR any peer printer's topic reports \"on\". Each PrintButler instance runs this independently - list the other printers' plug state topics as peers."
+msgstr "A light/relay shared across multiple printers, kept on as long as THIS printer (i.e. this PrintButler/OctoPrint instance is running - it shares power with the printer, so \"running\" already means \"powered\") OR any peer printer's topic reports \"on\". Each PrintButler instance runs this independently - list the other printers' plug state topics as peers."
 
 msgid "Keep the shared light on while any tracked printer is powered"
 msgstr "Keep the shared light on while any tracked printer is powered"
@@ -212,8 +191,8 @@ msgstr "Live Status"
 msgid "MQTT helper"
 msgstr "MQTT helper"
 
-msgid "This printer's plug"
-msgstr "This printer's plug"
+msgid "This printer"
+msgstr "This printer"
 
 msgid "Shared light desired state"
 msgstr "Shared light desired state"
@@ -274,12 +253,6 @@ msgstr "Test"
 
 msgid "Test (3s)"
 msgstr "Test (3s)"
-
-msgid "Show current state"
-msgstr "Show current state"
-
-msgid "Read-only - no MQTT is published, this just reports the last message received on the state topic. Unlike the other Test buttons, this needs Save first since it reads from an active subscription."
-msgstr "Read-only - no MQTT is published, this just reports the last message received on the state topic. Unlike the other Test buttons, this needs Save first since it reads from an active subscription."
 
 msgid "Test Trigger Only"
 msgstr "Test Trigger Only"

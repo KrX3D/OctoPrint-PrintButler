@@ -15,7 +15,6 @@
     <ul class="nav nav-tabs" id="printbutler_tabs">
         <li class="active"><a href="#printbutler_tab_finish"  data-toggle="tab">{{ _("Print Finished") }}</a></li>
         <li><a href="#printbutler_tab_light"  data-toggle="tab">{{ _("Finish Light") }}</a></li>
-        <li><a href="#printbutler_tab_plug"   data-toggle="tab">{{ _("Printer Plug") }}</a></li>
         <li><a href="#printbutler_tab_shared" data-toggle="tab">{{ _("Shared Light") }}</a></li>
         <li><a href="#printbutler_tab_shutdown" data-toggle="tab">{{ _("Safe Shutdown") }}</a></li>
         <li><a href="#printbutler_tab_status" data-toggle="tab"
@@ -197,60 +196,11 @@
             </div>
         </div>
 
-        <!-- ============================== Printer Plug ============================== -->
-        <div class="tab-pane" id="printbutler_tab_plug">
-            <p class="printbutler-section-heading">{{ _("This Printer's Power Plug") }}</p>
-            <p class="muted">
-                {{ _("The smart plug/switch powering this printer's mains. PrintButler only reads its state here (used by the Shared Light tab below) - actually cutting power after Safe Shutdown is handled externally, see the Safe Shutdown tab.") }}
-            </p>
-
-            <div class="control-group">
-                <div class="controls">
-                    <label class="checkbox">
-                        <input type="checkbox" data-bind="checked: settings.plug_enabled">
-                        {{ _("Track this printer's power plug state") }}
-                    </label>
-                </div>
-            </div>
-
-            <div class="control-group">
-                <label class="control-label">{{ _("State topic (subscribe)") }}</label>
-                <div class="controls">
-                    <input type="text" class="input-block-level"
-                           data-bind="value: settings.plug_state_topic, enable: settings.plug_enabled"
-                           placeholder="zigbee2mqtt/Prusa Mk3s Zigbee Plug">
-                </div>
-            </div>
-
-            <div class="control-group">
-                <label class="control-label">{{ _("\"On\" value") }}</label>
-                <div class="controls">
-                    <input type="text" style="width:150px; display:inline-block;"
-                           data-bind="value: settings.plug_state_payload_on, enable: settings.plug_enabled"
-                           placeholder="ON">
-                    <input type="text" style="width:150px; display:inline-block;"
-                           data-bind="value: settings.plug_state_json_key, enable: settings.plug_enabled"
-                           placeholder="state">
-                    <span class="help-inline muted">{{ _("Value, then the JSON field to read it from (leave the field blank for a plain-text payload).") }}</span>
-                </div>
-            </div>
-
-            <div class="control-group">
-                <div class="controls">
-                    <button class="btn btn-small"
-                            data-bind="click: testPlugState, enable: settings.plug_enabled() && !testPlugStateBusy(), css: {disabled: testPlugStateBusy}">
-                        <i class="fa fa-flask"></i> {{ _("Show current state") }}
-                    </button>
-                    <span class="help-inline muted">{{ _("Read-only - no MQTT is published, this just reports the last message received on the state topic. Unlike the other Test buttons, this needs Save first since it reads from an active subscription.") }}</span>
-                </div>
-            </div>
-        </div>
-
         <!-- ============================== Shared Light ============================== -->
         <div class="tab-pane" id="printbutler_tab_shared">
             <p class="printbutler-section-heading">{{ _("Shared Work Light") }}</p>
             <p class="muted">
-                {{ _("A light/relay shared across multiple printers, kept on as long as THIS printer's plug (above) OR any peer printer's topic reports \"on\". Each PrintButler instance runs this independently - list the other printers' plug state topics as peers.") }}
+                {{ _("A light/relay shared across multiple printers, kept on as long as THIS printer (i.e. this PrintButler/OctoPrint instance is running - it shares power with the printer, so \"running\" already means \"powered\") OR any peer printer's topic reports \"on\". Each PrintButler instance runs this independently - list the other printers' plug state topics as peers.") }}
             </p>
 
             <div class="control-group">
@@ -491,8 +441,8 @@
                         <td><span data-bind="css: mqttBadgeClass, text: mqttBadgeText" class="printbutler-status-badge"></span></td>
                     </tr>
                     <tr>
-                        <td>{{ _("This printer's plug") }}</td>
-                        <td data-bind="text: plugStateText"></td>
+                        <td>{{ _("This printer") }}</td>
+                        <td data-bind="text: thisPrinterActiveText"></td>
                     </tr>
                     <tr>
                         <td>{{ _("Shared light desired state") }}</td>

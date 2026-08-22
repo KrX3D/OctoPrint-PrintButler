@@ -33,7 +33,11 @@ class PrintButlerPlugin(
         self._log_entries = deque(maxlen=MAX_LOG_ENTRIES)
         self._mqtt_helpers = None
 
-        self._plug_state = None          # True/False/None (unknown)
+        # This printer's own presence: OctoPrint runs on the same host the
+        # smart plug powers, so "is this printer on" is trivially "is this
+        # plugin currently running" - no MQTT round-trip needed. True from
+        # startup until _do_safe_shutdown flips it off on its way out.
+        self._this_printer_active = True
         self._peer_states = {}           # topic -> True/False
         self._shared_light_desired = None
 
@@ -78,14 +82,6 @@ class PrintButlerPlugin(
             finish_light_qos=0,
             finish_light_retain=False,
             finish_light_turn_off_after=0,  # 0 = leave on until next print starts
-
-            # This printer's own power plug/switch - read-only tracking, used
-            # by the shared light below. Actually cutting power is handled
-            # externally, see the "Safe shutdown" trigger topic further down.
-            plug_enabled=False,
-            plug_state_topic="",
-            plug_state_payload_on="ON",
-            plug_state_json_key="state",  # blank = match against the raw payload
 
             # Shared work light (stays on while this OR any peer printer is on)
             shared_light_enabled=False,
@@ -183,6 +179,9 @@ class PrintButlerPlugin(
                 "MQTT plugin found, broker connected={}.".format(self._check_mqtt_connected())
             )
             self._rewire_mqtt()
+
+        if self._get_bool("shared_light_enabled"):
+            self._recompute_shared_light(reason="startup")
 
         threading.Thread(
             target=self._cooldown_loop, name="printbutler-cooldown", daemon=True
@@ -290,18 +289,11 @@ class PrintButlerPlugin(
 
         unsub = self._mqtt_helpers.get("mqtt_unsubscribe")
         if unsub:
-            unsub(self._on_plug_state_message)
             unsub(self._on_peer_state_message)
             unsub(self._on_shared_light_state_message)
 
         self._peer_states = {}
         sub = self._mqtt_helpers["mqtt_subscribe"]
-
-        if self._get_bool("plug_enabled"):
-            topic = self._settings.get(["plug_state_topic"])
-            if topic:
-                sub(topic, self._on_plug_state_message)
-                self._log("Subscribed to plug state topic: {}".format(topic))
 
         if self._get_bool("shared_light_enabled"):
             for peer_topic in self._get_peer_topics():
@@ -316,17 +308,6 @@ class PrintButlerPlugin(
     def _get_peer_topics(self):
         raw = self._settings.get(["shared_light_peer_topics"]) or ""
         return [line.strip() for line in raw.splitlines() if line.strip()]
-
-    def _on_plug_state_message(self, topic, payload, retained=None, qos=None, **kwargs):
-        val = self._payload_is_on(
-            payload,
-            self._settings.get(["plug_state_payload_on"]),
-            json_key=self._settings.get(["plug_state_json_key"]),
-        )
-        self._plug_state = val
-        self._log("Plug state -> {} ({})".format(val, topic))
-        if self._get_bool("shared_light_enabled"):
-            self._recompute_shared_light(reason="plug_state")
 
     def _on_peer_state_message(self, topic, payload, retained=None, qos=None, **kwargs):
         val = self._payload_is_on(
@@ -351,10 +332,10 @@ class PrintButlerPlugin(
     def _recompute_shared_light(self, reason=""):
         if not self._get_bool("shared_light_enabled"):
             return
-        active = bool(self._plug_state) or any(self._peer_states.values())
+        active = self._this_printer_active or any(self._peer_states.values())
         self._log(
-            "Recompute shared light ({}): plug={} peers={} -> active={}".format(
-                reason, self._plug_state, self._peer_states, active
+            "Recompute shared light ({}): this_printer={} peers={} -> active={}".format(
+                reason, self._this_printer_active, self._peer_states, active
             )
         )
         self._shared_light_desired = active
@@ -461,6 +442,10 @@ class PrintButlerPlugin(
             self._log("=" * 60)
             self._log("Safe shutdown requested.")
             self._cooldown_since = None
+
+            self._this_printer_active = False
+            if self._get_bool("shared_light_enabled"):
+                self._recompute_shared_light(reason="shutdown")
 
             if self._settings.get(["shutdown_trigger_topic"]):
                 self._publish_shutdown_trigger()
@@ -593,7 +578,6 @@ class PrintButlerPlugin(
             test_finish_light=[],
             test_shared_light=[],
             test_shutdown_trigger=[],
-            test_plug_state=[],
         )
 
     def on_api_command(self, command, data):
@@ -685,13 +669,6 @@ class PrintButlerPlugin(
                 "message": "Trigger topic published (shutdown command was NOT run).",
             })
 
-        elif command == "test_plug_state":
-            if self._plug_state is None:
-                msg = "No message received on the state topic yet."
-            else:
-                msg = "Last known state: {}".format("ON" if self._plug_state else "OFF")
-            return flask.jsonify({"success": True, "message": msg})
-
         return flask.abort(400)
 
     def on_api_get(self, request):
@@ -708,7 +685,7 @@ class PrintButlerPlugin(
             plugin_version=self._plugin_version,
             mqtt_helper_present=mqtt_helper_present,
             mqtt_connected=self._check_mqtt_connected() if mqtt_helper_present else False,
-            plug_state=self._plug_state,
+            this_printer_active=self._this_printer_active,
             shared_light_desired=self._shared_light_desired,
             peer_states=self._peer_states,
             quiet_hours_active=self._in_quiet_hours(),
