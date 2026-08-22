@@ -233,21 +233,30 @@ class PrintButlerPlugin(
 
     # -- Finish notify / finish light ---------------------------------------
 
-    def _publish_finish_notify(self):
-        topic = self._settings.get(["finish_topic"])
+    def _publish_finish_notify(self, overrides=None):
+        """
+        overrides lets the "Test" button in the UI use whatever is currently
+        typed into the settings form, even if it hasn't been saved yet - real
+        (event-triggered) calls pass nothing and use the persisted settings.
+        """
+        overrides = overrides or {}
+        topic = overrides.get("topic") or self._settings.get(["finish_topic"])
         if not topic:
             self._log("Finish notify enabled but no topic configured.", "WARNING")
-            return
+            return False
 
-        qos = int(self._settings.get(["finish_qos"]) or 0)
-        retain = self._get_bool("finish_retain")
-        payload_on = self._settings.get(["finish_payload_on"]) or "true"
-        payload_off = self._settings.get(["finish_payload_off"]) or "false"
+        qos = int(overrides.get("qos") if overrides.get("qos") is not None
+                   else self._settings.get(["finish_qos"]) or 0)
+        retain = bool(overrides.get("retain") if "retain" in overrides
+                      else self._get_bool("finish_retain"))
+        payload_on = overrides.get("payload_on") or self._settings.get(["finish_payload_on"]) or "true"
+        payload_off = overrides.get("payload_off") or self._settings.get(["finish_payload_off"]) or "false"
 
         self._cancel_timer("_finish_revert_timer")
         self._mqtt_publish(topic, payload_on, qos=qos, retain=retain)
 
-        revert_after = int(self._settings.get(["finish_revert_after"]) or 0)
+        revert_after = int(overrides.get("revert_after") if overrides.get("revert_after") is not None
+                            else self._settings.get(["finish_revert_after"]) or 0)
         if revert_after > 0:
             self._finish_revert_timer = threading.Timer(
                 revert_after,
@@ -255,19 +264,23 @@ class PrintButlerPlugin(
             )
             self._finish_revert_timer.daemon = True
             self._finish_revert_timer.start()
+        return True
 
-    def _set_finish_light(self, on):
-        topic = self._settings.get(["finish_light_topic"])
+    def _set_finish_light(self, on, overrides=None):
+        overrides = overrides or {}
+        topic = overrides.get("topic") or self._settings.get(["finish_light_topic"])
         if not topic:
-            return
-        qos = int(self._settings.get(["finish_light_qos"]) or 0)
-        retain = self._get_bool("finish_light_retain")
-        payload = (
-            self._settings.get(["finish_light_payload_on"])
-            if on
-            else self._settings.get(["finish_light_payload_off"])
-        )
+            return False
+        qos = int(overrides.get("qos") if overrides.get("qos") is not None
+                   else self._settings.get(["finish_light_qos"]) or 0)
+        retain = bool(overrides.get("retain") if "retain" in overrides
+                      else self._get_bool("finish_light_retain"))
+        if on:
+            payload = overrides.get("payload_on") or self._settings.get(["finish_light_payload_on"])
+        else:
+            payload = overrides.get("payload_off") or self._settings.get(["finish_light_payload_off"])
         self._mqtt_publish(topic, payload, qos=qos, retain=retain)
+        return True
 
     # -- MQTT wiring ---------------------------------------------------------
 
@@ -347,18 +360,21 @@ class PrintButlerPlugin(
         self._shared_light_desired = active
         self._set_shared_light(active)
 
-    def _set_shared_light(self, on):
-        topic = self._settings.get(["shared_light_set_topic"])
+    def _set_shared_light(self, on, overrides=None):
+        overrides = overrides or {}
+        topic = overrides.get("topic") or self._settings.get(["shared_light_set_topic"])
         if not topic:
-            return
-        qos = int(self._settings.get(["shared_light_qos"]) or 0)
-        retain = self._get_bool("shared_light_retain")
-        payload = (
-            self._settings.get(["shared_light_payload_on"])
-            if on
-            else self._settings.get(["shared_light_payload_off"])
-        )
+            return False
+        qos = int(overrides.get("qos") if overrides.get("qos") is not None
+                   else self._settings.get(["shared_light_qos"]) or 0)
+        retain = bool(overrides.get("retain") if "retain" in overrides
+                      else self._get_bool("shared_light_retain"))
+        if on:
+            payload = overrides.get("payload_on") or self._settings.get(["shared_light_payload_on"])
+        else:
+            payload = overrides.get("payload_off") or self._settings.get(["shared_light_payload_off"])
         self._mqtt_publish(topic, payload, qos=qos, retain=retain)
+        return True
 
     def _check_mqtt_connected(self):
         """
@@ -473,13 +489,16 @@ class PrintButlerPlugin(
             self._shutdown_running = False
             self._shutdown_lock.release()
 
-    def _publish_shutdown_trigger(self):
-        topic = self._settings.get(["shutdown_trigger_topic"])
+    def _publish_shutdown_trigger(self, overrides=None):
+        overrides = overrides or {}
+        topic = overrides.get("topic") or self._settings.get(["shutdown_trigger_topic"])
         if not topic:
             return False
-        qos = int(self._settings.get(["shutdown_trigger_qos"]) or 0)
-        retain = self._get_bool("shutdown_trigger_retain")
-        payload = self._settings.get(["shutdown_trigger_payload_on"]) or "ON"
+        qos = int(overrides.get("qos") if overrides.get("qos") is not None
+                   else self._settings.get(["shutdown_trigger_qos"]) or 0)
+        retain = bool(overrides.get("retain") if "retain" in overrides
+                      else self._get_bool("shutdown_trigger_retain"))
+        payload = overrides.get("payload_on") or self._settings.get(["shutdown_trigger_payload_on"]) or "ON"
         self._log(
             "Publishing shutdown trigger -> {} = {} (an external automation is "
             "expected to cut mains power once it confirms this host is actually "
@@ -585,12 +604,12 @@ class PrintButlerPlugin(
                 return flask.jsonify({
                     "success": False,
                     "message": "Safe shutdown is disabled in settings.",
-                }), 400
+                })
             if self._shutdown_running:
                 return flask.jsonify({
                     "success": False,
                     "message": "A shutdown is already in progress.",
-                }), 409
+                })
             t = threading.Thread(
                 target=self._do_safe_shutdown, name="printbutler-shutdown", daemon=True
             )
@@ -617,41 +636,50 @@ class PrintButlerPlugin(
             return flask.jsonify({"success": True, "armed": self._auto_shutdown_armed})
 
         elif command == "test_finish_notify":
-            if not self._settings.get(["finish_topic"]):
+            if not self._publish_finish_notify(overrides=data):
                 return flask.jsonify({
-                    "success": False, "message": "No finish topic configured.",
-                }), 400
-            self._publish_finish_notify()
-            return flask.jsonify({"success": True, "message": "Finish notification published."})
+                    "success": False,
+                    "message": "No finish topic configured - fill in the Topic field first.",
+                })
+            return flask.jsonify({
+                "success": True,
+                "message": "Finish notification published (using the current, possibly unsaved field values).",
+            })
 
         elif command == "test_finish_light":
-            if not self._settings.get(["finish_light_topic"]):
+            if not self._set_finish_light(True, overrides=data):
                 return flask.jsonify({
-                    "success": False, "message": "No finish light topic configured.",
-                }), 400
-            self._set_finish_light(True)
-            t = threading.Timer(3, lambda: self._set_finish_light(False))
+                    "success": False,
+                    "message": "No finish light topic configured - fill in the Topic field first.",
+                })
+            t = threading.Timer(3, lambda: self._set_finish_light(False, overrides=data))
             t.daemon = True
             t.start()
-            return flask.jsonify({"success": True, "message": "Finish light switched on for 3s."})
+            return flask.jsonify({
+                "success": True,
+                "message": "Finish light switched on for 3s (using the current, possibly unsaved field values).",
+            })
 
         elif command == "test_shared_light":
-            if not self._settings.get(["shared_light_set_topic"]):
+            if not self._set_shared_light(True, overrides=data):
                 return flask.jsonify({
-                    "success": False, "message": "No shared light set topic configured.",
-                }), 400
-            self._set_shared_light(True)
-            t = threading.Timer(3, lambda: self._set_shared_light(False))
+                    "success": False,
+                    "message": "No shared light set topic configured - fill in the field first.",
+                })
+            t = threading.Timer(3, lambda: self._set_shared_light(False, overrides=data))
             t.daemon = True
             t.start()
-            return flask.jsonify({"success": True, "message": "Shared light switched on for 3s."})
+            return flask.jsonify({
+                "success": True,
+                "message": "Shared light switched on for 3s (using the current, possibly unsaved field values).",
+            })
 
         elif command == "test_shutdown_trigger":
-            if not self._settings.get(["shutdown_trigger_topic"]):
+            if not self._publish_shutdown_trigger(overrides=data):
                 return flask.jsonify({
-                    "success": False, "message": "No trigger topic configured.",
-                }), 400
-            self._publish_shutdown_trigger()
+                    "success": False,
+                    "message": "No trigger topic configured - fill in the field first.",
+                })
             return flask.jsonify({
                 "success": True,
                 "message": "Trigger topic published (shutdown command was NOT run).",

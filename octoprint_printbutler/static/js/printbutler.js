@@ -193,10 +193,10 @@ $(function () {
                 });
         };
 
-        self._runTest = function (command, busyObservable) {
+        self._runTest = function (command, busyObservable, extraData) {
             if (busyObservable()) { return; }
             busyObservable(true);
-            OctoPrint.simpleApiCommand("printbutler", command, {})
+            OctoPrint.simpleApiCommand("printbutler", command, extraData || {})
                 .done(function (data) {
                     new PNotify({
                         title: tr("PrintButler"),
@@ -211,11 +211,51 @@ $(function () {
                 .always(function () { busyObservable(false); });
         };
 
-        self.testFinishNotify = function () { self._runTest("test_finish_notify", self.testFinishNotifyBusy); };
-        self.testFinishLight  = function () { self._runTest("test_finish_light", self.testFinishLightBusy); };
-        self.testSharedLight  = function () { self._runTest("test_shared_light", self.testSharedLightBusy); };
-        self.testShutdownTrigger = function () { self._runTest("test_shutdown_trigger", self.testShutdownTriggerBusy); };
-        self.testPlugState    = function () { self._runTest("test_plug_state", self.testPlugStateBusy); };
+        // Test buttons send the form's current (possibly unsaved) values as
+        // overrides, so you can try a topic/payload before hitting Save.
+
+        self.testFinishNotify = function () {
+            self._runTest("test_finish_notify", self.testFinishNotifyBusy, {
+                topic: self.settings.finish_topic(),
+                payload_on: self.settings.finish_payload_on(),
+                payload_off: self.settings.finish_payload_off(),
+                qos: parseInt(self.settings.finish_qos(), 10) || 0,
+                retain: self.settings.finish_retain() === true,
+                revert_after: parseInt(self.settings.finish_revert_after(), 10) || 0
+            });
+        };
+        self.testFinishLight = function () {
+            self._runTest("test_finish_light", self.testFinishLightBusy, {
+                topic: self.settings.finish_light_topic(),
+                payload_on: self.settings.finish_light_payload_on(),
+                payload_off: self.settings.finish_light_payload_off(),
+                qos: parseInt(self.settings.finish_light_qos(), 10) || 0,
+                retain: self.settings.finish_light_retain() === true
+            });
+        };
+
+        self.testSharedLight = function () {
+            self._runTest("test_shared_light", self.testSharedLightBusy, {
+                topic: self.settings.shared_light_set_topic(),
+                payload_on: self.settings.shared_light_payload_on(),
+                payload_off: self.settings.shared_light_payload_off(),
+                qos: parseInt(self.settings.shared_light_qos(), 10) || 0,
+                retain: self.settings.shared_light_retain() === true
+            });
+        };
+
+        self.testShutdownTrigger = function () {
+            self._runTest("test_shutdown_trigger", self.testShutdownTriggerBusy, {
+                topic: self.settings.shutdown_trigger_topic(),
+                payload_on: self.settings.shutdown_trigger_payload_on(),
+                qos: parseInt(self.settings.shutdown_trigger_qos(), 10) || 0,
+                retain: self.settings.shutdown_trigger_retain() === true
+            });
+        };
+
+        // Printer Plug is read-only (subscribed state), not a publish - it can
+        // only reflect what's actively subscribed, which requires Save first.
+        self.testPlugState = function () { self._runTest("test_plug_state", self.testPlugStateBusy); };
 
         self.clearLogs = function () {
             OctoPrint.simpleApiCommand("printbutler", "clear_logs", {})

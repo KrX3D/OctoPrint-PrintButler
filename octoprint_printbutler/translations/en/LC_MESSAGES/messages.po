@@ -278,8 +278,8 @@ msgstr "Test (3s)"
 msgid "Show current state"
 msgstr "Show current state"
 
-msgid "Read-only - no MQTT is published, this just reports the last message received on the state topic."
-msgstr "Read-only - no MQTT is published, this just reports the last message received on the state topic."
+msgid "Read-only - no MQTT is published, this just reports the last message received on the state topic. Unlike the other Test buttons, this needs Save first since it reads from an active subscription."
+msgstr "Read-only - no MQTT is published, this just reports the last message received on the state topic. Unlike the other Test buttons, this needs Save first since it reads from an active subscription."
 
 msgid "Test Trigger Only"
 msgstr "Test Trigger Only"

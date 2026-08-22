@@ -278,8 +278,8 @@ msgstr "Testen (3s)"
 msgid "Show current state"
 msgstr "Aktuellen Status anzeigen"
 
-msgid "Read-only - no MQTT is published, this just reports the last message received on the state topic."
-msgstr "Nur lesend - es wird nichts per MQTT gesendet, es wird nur die zuletzt empfangene Nachricht des Status-Topics angezeigt."
+msgid "Read-only - no MQTT is published, this just reports the last message received on the state topic. Unlike the other Test buttons, this needs Save first since it reads from an active subscription."
+msgstr "Nur lesend - es wird nichts per MQTT gesendet, es wird nur die zuletzt empfangene Nachricht des Status-Topics angezeigt. Anders als die übrigen Test-Buttons braucht dieser vorher ein Save, da er auf ein aktives Abonnement angewiesen ist."
 
 msgid "Test Trigger Only"
 msgstr "Nur Trigger testen"

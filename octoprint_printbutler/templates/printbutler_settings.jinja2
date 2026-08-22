@@ -241,7 +241,7 @@
                             data-bind="click: testPlugState, enable: settings.plug_enabled() && !testPlugStateBusy(), css: {disabled: testPlugStateBusy}">
                         <i class="fa fa-flask"></i> {{ _("Show current state") }}
                     </button>
-                    <span class="help-inline muted">{{ _("Read-only - no MQTT is published, this just reports the last message received on the state topic.") }}</span>
+                    <span class="help-inline muted">{{ _("Read-only - no MQTT is published, this just reports the last message received on the state topic. Unlike the other Test buttons, this needs Save first since it reads from an active subscription.") }}</span>
                 </div>
             </div>
         </div>
