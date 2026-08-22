@@ -24,7 +24,7 @@ $(function () {
         self.pluginVersion   = ko.observable("?");
         self.mqttHelperPresent = ko.observable(null);
         self.mqttConnected     = ko.observable(null);
-        self.plugState       = ko.observable(null);
+        self.thisPrinterActive = ko.observable(true);
         self.sharedLightDesired = ko.observable(null);
         self.quietHoursActive   = ko.observable(null);
         self.shutdownRunning    = ko.observable(false);
@@ -39,7 +39,6 @@ $(function () {
         self.testFinishLightBusy    = ko.observable(false);
         self.testSharedLightBusy    = ko.observable(false);
         self.testShutdownTriggerBusy = ko.observable(false);
-        self.testPlugStateBusy      = ko.observable(false);
 
         // settings is set in onBeforeBinding - null until then.
         self.settings = null;
@@ -60,8 +59,8 @@ $(function () {
             return tr("Unknown");
         });
 
-        self.plugStateText = ko.computed(function () {
-            return boolText(self.plugState(), tr("On"), tr("Off"), tr("Unknown"));
+        self.thisPrinterActiveText = ko.computed(function () {
+            return boolText(self.thisPrinterActive(), tr("Active"), tr("Shutting down"), tr("Unknown"));
         });
 
         self.sharedLightText = ko.computed(function () {
@@ -134,7 +133,7 @@ $(function () {
                     self.pluginVersion(data.plugin_version || "?");
                     self.mqttHelperPresent(data.mqtt_helper_present === true);
                     self.mqttConnected(data.mqtt_connected === true);
-                    self.plugState(data.plug_state);
+                    self.thisPrinterActive(data.this_printer_active !== false);
                     self.sharedLightDesired(data.shared_light_desired);
                     self.quietHoursActive(data.quiet_hours_active === true);
                     self.shutdownRunning(data.shutdown_running === true);
@@ -252,10 +251,6 @@ $(function () {
                 retain: self.settings.shutdown_trigger_retain() === true
             });
         };
-
-        // Printer Plug is read-only (subscribed state), not a publish - it can
-        // only reflect what's actively subscribed, which requires Save first.
-        self.testPlugState = function () { self._runTest("test_plug_state", self.testPlugStateBusy); };
 
         self.clearLogs = function () {
             OctoPrint.simpleApiCommand("printbutler", "clear_logs", {})
