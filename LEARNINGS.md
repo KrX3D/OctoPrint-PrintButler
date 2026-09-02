@@ -77,14 +77,16 @@ see the PR history for that.
   `<a class="pull-right">`. Wrapping in `<li>` breaks the DOM structure
   enough to interfere with both layout and Knockout bindings.
 - **`type: github_release` compares against tagged releases, not commits on
-  main.** Every PR bumping `__plugin_version__` does nothing for the "Update"
-  button unless a matching GitHub Release is *also* tagged (bare semver, no
-  `v` prefix - checked against [jneilliii/OctoPrint-ActiveFiltersExtended](https://github.com/jneilliii/OctoPrint-ActiveFiltersExtended),
-  a real working example: tags `0.1.0`, `0.0.2`, no `v`). Until a release is
-  tagged for a given version, "Update" finds nothing and only **Reinstall**
-  (which re-fetches the archive URL regardless of version) actually picks up
-  new code. Bump the version on every PR regardless - it's still the only way
-  the settings page's "Version:" label can confirm a reinstall worked.
+  main.** A version bump alone does nothing for the "Update" button unless a
+  matching GitHub Release is *also* tagged (bare semver, no `v` prefix -
+  checked against [jneilliii/OctoPrint-ActiveFiltersExtended](https://github.com/jneilliii/OctoPrint-ActiveFiltersExtended),
+  a real working example: tags `0.1.0`, `0.0.2`, no `v`). Automated by
+  `.github/workflows/tag-release-on-version-bump.yml`, which tags+releases
+  on every push to `main` that touches `octoprint_printbutler/__init__.py`
+  (skipping if a release for that version already exists) - so bumping
+  `__plugin_version__` is now sufficient on its own again. Before that
+  workflow existed, releases had to be created by hand and were easy to
+  forget, which is exactly what silently broke "Update" for a while.
 - **The `pip=` URL template's placeholder is `{target_version}`, not
   `{target}`.** OctoPrint's software update checker substitutes
   `{target_version}` with the release tag when constructing the install

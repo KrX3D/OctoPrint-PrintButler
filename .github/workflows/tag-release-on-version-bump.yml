@@ -1,0 +1,58 @@
+name: Tag and release on version bump
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "octoprint_printbutler/__init__.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract plugin version
+        id: version
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -oP '__plugin_version__\s*=\s*"\K[^"]+' octoprint_printbutler/__init__.py)
+          if [ -z "$VERSION" ]; then
+            echo "Could not extract __plugin_version__ from octoprint_printbutler/__init__.py" >&2
+            exit 1
+          fi
+          echo "Extracted version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      # Plugin Manager's Update button (type=github_release) only finds a
+      # newer version if a matching tag/release exists - bumping
+      # __plugin_version__ alone isn't enough. This closes that loop
+      # automatically instead of relying on a manual release per version.
+      - name: Check if a release already exists for this version
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "${{ steps.version.outputs.version }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release ${{ steps.version.outputs.version }} already exists, skipping."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create tag and release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.version }}" \
+            --repo "${{ github.repository }}" \
+            --title "${{ steps.version.outputs.version }}" \
+            --target "${{ github.sha }}" \
+            --generate-notes
