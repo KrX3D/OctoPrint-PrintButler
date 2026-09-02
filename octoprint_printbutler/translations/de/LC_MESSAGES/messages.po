@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: OctoPrint-PrintButler\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-08-21 00:00+0000\n"
-"PO-Revision-Date: 2026-08-21 00:00+0000\n"
+"PO-Revision-Date: 2026-09-02 00:00+0000\n"
 "Last-Translator: KrX3D\n"
 "Language-Team: German\n"
 "Language: de\n"
@@ -101,6 +101,9 @@ msgstr "Reiner Text für die meisten Geräte (WLED, Tasmota, HA-artige Schalter)
 msgid "Set payload (on / off)"
 msgstr "Steuer-Payload (an / aus)"
 
+msgid "Independent window from the Print Finished tab's quiet hours - during this window, the finish light is suppressed."
+msgstr "Unabhängiges Zeitfenster vom Tab \"Druck fertig\" - während dieser Zeit wird das Fertig-Licht unterdrückt."
+
 msgid "Shared Work Light"
 msgstr "Gemeinsames Arbeitslicht"
 
@@ -122,11 +125,20 @@ msgstr "Topics der anderen Drucker"
 msgid "One MQTT topic per line, plus the \"on\" value and the JSON field to read it from (blank = plain-text payload). Same format assumed for all peers."
 msgstr "Ein MQTT-Topic pro Zeile, plus dem \"an\"-Wert und dem JSON-Feld, aus dem er gelesen wird (leer = reiner Text-Payload). Für alle Peers wird das gleiche Format angenommen."
 
-msgid "This host cannot cut its own mains power reliably - once the shutdown command runs, OctoPrint (and MQTT) will die before it can finish. Instead, PrintButler publishes a trigger topic BEFORE shutting down; wire up a Home Assistant automation (or similar) that watches this topic and cuts power to the printer plug once it has confirmed the host is actually down."
-msgstr "Dieser Host kann seine eigene Stromversorgung nicht zuverlässig selbst trennen - sobald der Shutdown-Befehl läuft, sterben OctoPrint (und MQTT) bevor das abgeschlossen werden kann. Stattdessen veröffentlicht PrintButler VOR dem Herunterfahren ein Trigger-Topic; richte eine Home-Assistant-Automatisierung (oder ähnliches) ein, die dieses Topic beobachtet und die Steckdose erst dann trennt, wenn bestätigt ist, dass der Host wirklich heruntergefahren ist."
+msgid "Watches the bed and nozzle temperature continuously - not just after a print - and once both stay below their thresholds for the confirm time while the printer isn't printing, runs the shutdown command below. This host can't cut its own mains power reliably (OctoPrint and MQTT die mid-shutdown), so instead PrintButler publishes a trigger topic first; wire a Home Assistant automation (or similar) to that topic to cut power once it confirms the host is actually down."
+msgstr "Überwacht durchgehend Bett- und Düsentemperatur - nicht nur nach einem Druck - und sobald beide für die Bestätigungszeit unter ihrem Schwellwert bleiben, während der Drucker nicht druckt, wird der Shutdown-Befehl unten ausgeführt. Dieser Host kann seine eigene Stromversorgung nicht zuverlässig selbst trennen (OctoPrint und MQTT sterben mitten im Herunterfahren), daher veröffentlicht PrintButler stattdessen zuerst ein Trigger-Topic; richte eine Home-Assistant-Automatisierung (oder ähnliches) auf dieses Topic aus, um die Stromversorgung zu trennen, sobald bestätigt ist, dass der Host wirklich heruntergefahren ist."
 
 msgid "Enable Safe Shutdown"
 msgstr "Sicheres Herunterfahren aktivieren"
+
+msgid "Bed / Nozzle threshold (°C)"
+msgstr "Bett- / Düsen-Schwellwert (°C)"
+
+msgid "Confirm for (seconds)"
+msgstr "Bestätigen für (Sekunden)"
+
+msgid "Both temperatures must stay at or below their threshold for this long, after having been seen above it, before shutdown fires."
+msgstr "Beide Temperaturen müssen so lange auf oder unter ihrem Schwellwert bleiben, nachdem sie zuvor darüber gemessen wurden, bevor das Herunterfahren ausgelöst wird."
 
 msgid "Shutdown command"
 msgstr "Shutdown-Befehl"
@@ -151,30 +163,6 @@ msgstr "Wartezeit vor dem Herunterfahren (Sekunden)"
 
 msgid "Wait this long after publishing the trigger before running the shutdown command, so the message has time to actually leave the host."
 msgstr "Wie lange nach dem Senden des Trigger-Topics gewartet wird, bevor der Shutdown-Befehl ausgeführt wird, damit die Nachricht den Host noch verlassen kann."
-
-msgid "Shutdown Printer Now"
-msgstr "Drucker jetzt herunterfahren"
-
-msgid "Shutdown in progress..."
-msgstr "Herunterfahren läuft ..."
-
-msgid "Auto-Shutdown When Cool"
-msgstr "Auto-Shutdown nach Abkühlen"
-
-msgid "Continuously watches the bed and nozzle temperature - not just after a print - and once both stay below their thresholds for the confirm time while the printer isn't printing, triggers Safe Shutdown automatically, same as pressing the button above. This includes right after OctoPrint (re)starts if the printer is already idle and cool. It disarms itself once it fires (see below), and re-arms automatically the next time OctoPrint starts."
-msgstr "Überwacht durchgehend Bett- und Düsentemperatur - nicht nur nach einem Druck - und sobald beide für die Bestätigungszeit unter ihrem Schwellwert bleiben, während der Drucker nicht druckt, wird automatisch sicheres Herunterfahren ausgelöst, genau wie beim Button oben. Das gilt auch direkt nach einem (Neu-)Start von OctoPrint, falls der Drucker bereits im Leerlauf und kalt ist. Nach dem Auslösen deaktiviert es sich selbst (siehe unten) und wird beim nächsten OctoPrint-Start automatisch wieder aktiviert."
-
-msgid "Enable auto-shutdown when cool"
-msgstr "Auto-Shutdown nach Abkühlen aktivieren"
-
-msgid "Bed / Nozzle threshold (°C)"
-msgstr "Bett- / Düsen-Schwellwert (°C)"
-
-msgid "Confirm for (seconds)"
-msgstr "Bestätigen für (Sekunden)"
-
-msgid "Both temperatures must stay at or below their threshold for this long before shutdown fires."
-msgstr "Beide Temperaturen müssen so lange auf oder unter ihrem Schwellwert bleiben, bevor das Herunterfahren ausgelöst wird."
 
 msgid "Controlled live by the power button in the top navigation bar - armed by default on every OctoPrint start; click it to disarm for the current session (e.g. to keep the printer on after this print)."
 msgstr "Wird live über den Power-Button in der oberen Navigationsleiste gesteuert - bei jedem OctoPrint-Start standardmäßig aktiv (armed); anklicken, um es für die aktuelle Sitzung zu deaktivieren (z. B. um den Drucker nach diesem Druck an zu lassen)."
@@ -236,17 +224,8 @@ msgstr "Ja"
 msgid "No"
 msgstr "Nein"
 
-msgid "Shut down this printer now? Mains power will be cut after the configured delay."
-msgstr "Diesen Drucker jetzt herunterfahren? Die Stromversorgung wird nach der eingestellten Verzögerung getrennt."
-
 msgid "PrintButler"
 msgstr "PrintButler"
-
-msgid "Shutdown initiated."
-msgstr "Herunterfahren gestartet."
-
-msgid "Could not start shutdown."
-msgstr "Herunterfahren konnte nicht gestartet werden."
 
 msgid "Request failed."
 msgstr "Anfrage fehlgeschlagen."
