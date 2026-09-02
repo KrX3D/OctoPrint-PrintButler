@@ -27,8 +27,6 @@ $(function () {
         self.thisPrinterActive = ko.observable(true);
         self.sharedLightDesired = ko.observable(null);
         self.quietHoursActive   = ko.observable(null);
-        self.shutdownRunning    = ko.observable(false);
-        self.shutdownBusy       = ko.observable(false);
         self.armed                = ko.observable(true);
         self.cooldownCounting          = ko.observable(false);
         self.cooldownSecondsRemaining  = ko.observable(null);
@@ -74,9 +72,7 @@ $(function () {
         self.autoShutdownFeatureEnabled = ko.computed(function () {
             try {
                 var shutdownOn = self.settings && self.settings.shutdown_enabled();
-                var autoOn = self.settings && self.settings.auto_shutdown_enabled();
-                return (shutdownOn === true || shutdownOn === "true")
-                    && (autoOn === true || autoOn === "true");
+                return shutdownOn === true || shutdownOn === "true";
             }
             catch (e) { return false; }
         });
@@ -99,7 +95,6 @@ $(function () {
         };
 
         self.onSettingsShown = function () {
-            self.shutdownBusy(false);
             self.refreshStatus();
 
             self.statusPolling = setInterval(function () {
@@ -136,8 +131,6 @@ $(function () {
                     self.thisPrinterActive(data.this_printer_active !== false);
                     self.sharedLightDesired(data.shared_light_desired);
                     self.quietHoursActive(data.quiet_hours_active === true);
-                    self.shutdownRunning(data.shutdown_running === true);
-                    self.shutdownBusy(data.shutdown_running === true);
                     self.armed(data.auto_shutdown_armed !== false);
                     self.cooldownCounting(data.cooldown_counting === true);
                     self.cooldownSecondsRemaining(
@@ -150,34 +143,6 @@ $(function () {
                         var el = document.getElementById("printbutler_log_area");
                         if (el) { el.scrollTop = el.scrollHeight; }
                     }
-                });
-        };
-
-        self.shutdownNow = function () {
-            if (self.shutdownBusy()) { return; }
-            if (!confirm(tr("Shut down this printer now? Mains power will be cut after the configured delay."))) {
-                return;
-            }
-            self.shutdownBusy(true);
-            OctoPrint.simpleApiCommand("printbutler", "shutdown_now", {})
-                .done(function (data) {
-                    if (data.success) {
-                        new PNotify({
-                            title: tr("PrintButler"), text: tr("Shutdown initiated."),
-                            type: "success", hide: true
-                        });
-                    } else {
-                        new PNotify({
-                            title: tr("PrintButler"),
-                            text: data.message || tr("Could not start shutdown."),
-                            type: "error"
-                        });
-                        self.shutdownBusy(false);
-                    }
-                })
-                .fail(function () {
-                    new PNotify({title: tr("PrintButler"), text: tr("Request failed."), type: "error"});
-                    self.shutdownBusy(false);
                 });
         };
 

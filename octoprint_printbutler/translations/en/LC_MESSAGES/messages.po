@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: OctoPrint-PrintButler\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-08-21 00:00+0000\n"
-"PO-Revision-Date: 2026-08-21 00:00+0000\n"
+"PO-Revision-Date: 2026-09-02 00:00+0000\n"
 "Last-Translator: KrX3D\n"
 "Language-Team: English\n"
 "Language: en\n"
@@ -101,6 +101,9 @@ msgstr "Plain text for most devices (WLED, Tasmota, HA-style switches). Some Zig
 msgid "Set payload (on / off)"
 msgstr "Set payload (on / off)"
 
+msgid "Independent window from the Print Finished tab's quiet hours - during this window, the finish light is suppressed."
+msgstr "Independent window from the Print Finished tab's quiet hours - during this window, the finish light is suppressed."
+
 msgid "Shared Work Light"
 msgstr "Shared Work Light"
 
@@ -122,11 +125,20 @@ msgstr "Peer printer topics"
 msgid "One MQTT topic per line, plus the \"on\" value and the JSON field to read it from (blank = plain-text payload). Same format assumed for all peers."
 msgstr "One MQTT topic per line, plus the \"on\" value and the JSON field to read it from (blank = plain-text payload). Same format assumed for all peers."
 
-msgid "This host cannot cut its own mains power reliably - once the shutdown command runs, OctoPrint (and MQTT) will die before it can finish. Instead, PrintButler publishes a trigger topic BEFORE shutting down; wire up a Home Assistant automation (or similar) that watches this topic and cuts power to the printer plug once it has confirmed the host is actually down."
-msgstr "This host cannot cut its own mains power reliably - once the shutdown command runs, OctoPrint (and MQTT) will die before it can finish. Instead, PrintButler publishes a trigger topic BEFORE shutting down; wire up a Home Assistant automation (or similar) that watches this topic and cuts power to the printer plug once it has confirmed the host is actually down."
+msgid "Watches the bed and nozzle temperature continuously - not just after a print - and once both stay below their thresholds for the confirm time while the printer isn't printing, runs the shutdown command below. This host can't cut its own mains power reliably (OctoPrint and MQTT die mid-shutdown), so instead PrintButler publishes a trigger topic first; wire a Home Assistant automation (or similar) to that topic to cut power once it confirms the host is actually down."
+msgstr "Watches the bed and nozzle temperature continuously - not just after a print - and once both stay below their thresholds for the confirm time while the printer isn't printing, runs the shutdown command below. This host can't cut its own mains power reliably (OctoPrint and MQTT die mid-shutdown), so instead PrintButler publishes a trigger topic first; wire a Home Assistant automation (or similar) to that topic to cut power once it confirms the host is actually down."
 
 msgid "Enable Safe Shutdown"
 msgstr "Enable Safe Shutdown"
+
+msgid "Bed / Nozzle threshold (°C)"
+msgstr "Bed / Nozzle threshold (°C)"
+
+msgid "Confirm for (seconds)"
+msgstr "Confirm for (seconds)"
+
+msgid "Both temperatures must stay at or below their threshold for this long, after having been seen above it, before shutdown fires."
+msgstr "Both temperatures must stay at or below their threshold for this long, after having been seen above it, before shutdown fires."
 
 msgid "Shutdown command"
 msgstr "Shutdown command"
@@ -151,30 +163,6 @@ msgstr "Settle delay (seconds)"
 
 msgid "Wait this long after publishing the trigger before running the shutdown command, so the message has time to actually leave the host."
 msgstr "Wait this long after publishing the trigger before running the shutdown command, so the message has time to actually leave the host."
-
-msgid "Shutdown Printer Now"
-msgstr "Shutdown Printer Now"
-
-msgid "Shutdown in progress..."
-msgstr "Shutdown in progress..."
-
-msgid "Auto-Shutdown When Cool"
-msgstr "Auto-Shutdown When Cool"
-
-msgid "Continuously watches the bed and nozzle temperature - not just after a print - and once both stay below their thresholds for the confirm time while the printer isn't printing, triggers Safe Shutdown automatically, same as pressing the button above. This includes right after OctoPrint (re)starts if the printer is already idle and cool. It disarms itself once it fires (see below), and re-arms automatically the next time OctoPrint starts."
-msgstr "Continuously watches the bed and nozzle temperature - not just after a print - and once both stay below their thresholds for the confirm time while the printer isn't printing, triggers Safe Shutdown automatically, same as pressing the button above. This includes right after OctoPrint (re)starts if the printer is already idle and cool. It disarms itself once it fires (see below), and re-arms automatically the next time OctoPrint starts."
-
-msgid "Enable auto-shutdown when cool"
-msgstr "Enable auto-shutdown when cool"
-
-msgid "Bed / Nozzle threshold (°C)"
-msgstr "Bed / Nozzle threshold (°C)"
-
-msgid "Confirm for (seconds)"
-msgstr "Confirm for (seconds)"
-
-msgid "Both temperatures must stay at or below their threshold for this long before shutdown fires."
-msgstr "Both temperatures must stay at or below their threshold for this long before shutdown fires."
 
 msgid "Controlled live by the power button in the top navigation bar - armed by default on every OctoPrint start; click it to disarm for the current session (e.g. to keep the printer on after this print)."
 msgstr "Controlled live by the power button in the top navigation bar - armed by default on every OctoPrint start; click it to disarm for the current session (e.g. to keep the printer on after this print)."
@@ -236,17 +224,8 @@ msgstr "Yes"
 msgid "No"
 msgstr "No"
 
-msgid "Shut down this printer now? Mains power will be cut after the configured delay."
-msgstr "Shut down this printer now? Mains power will be cut after the configured delay."
-
 msgid "PrintButler"
 msgstr "PrintButler"
-
-msgid "Shutdown initiated."
-msgstr "Shutdown initiated."
-
-msgid "Could not start shutdown."
-msgstr "Could not start shutdown."
 
 msgid "Request failed."
 msgstr "Request failed."

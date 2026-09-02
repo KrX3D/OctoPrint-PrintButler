@@ -49,6 +49,11 @@ class PrintButlerPlugin(
 
         self._cooldown_stop = threading.Event()
         self._cooldown_since = None   # timestamp, or None when not currently counting down
+        # Requires an actual hot reading to be observed since the watch last
+        # (re)armed, before a cool reading is allowed to start the countdown -
+        # otherwise a routine OctoPrint restart while the printer just
+        # happens to already be idle/cold would false-trigger a shutdown.
+        self._cooldown_seen_hot = False
         # Auto-shutdown-when-cool arm/disarm - live, in-memory, resets to
         # armed on every OctoPrint start (see the navbar toggle).
         self._auto_shutdown_armed = True
@@ -84,6 +89,12 @@ class PrintButlerPlugin(
             finish_light_retain=False,
             finish_light_turn_off_after=0,  # 0 = leave on until next print starts
 
+            # Quiet hours for the finish light specifically - independent
+            # window from the print-finished notification above.
+            finish_light_quiet_hours_enabled=True,
+            finish_light_quiet_hours_start="22:00",
+            finish_light_quiet_hours_end="10:00",
+
             # Shared work light (stays on while this OR any peer printer is on)
             shared_light_enabled=False,
             shared_light_set_topic="",
@@ -111,10 +122,10 @@ class PrintButlerPlugin(
             shutdown_trigger_retain=False,
             shutdown_trigger_settle_seconds=3,
 
-            # Auto-shutdown when cool: after a print finishes, watch bed/nozzle
-            # temps and fire Safe Shutdown once both stay below threshold for
-            # a sustained period. Gated by the navbar arm/disarm toggle too.
-            auto_shutdown_enabled=False,
+            # Safe Shutdown fires automatically once bed/nozzle stay below
+            # threshold for a sustained period after being observed hot (not
+            # just already-cold at startup) and the printer isn't printing.
+            # Gated by the navbar arm/disarm toggle too.
             auto_shutdown_bed_threshold=40,
             auto_shutdown_tool_threshold=40,
             auto_shutdown_confirm_seconds=60,
@@ -213,7 +224,8 @@ class PrintButlerPlugin(
                 self._publish_finish_notify()
 
         if self._get_bool("finish_light_enabled"):
-            if quiet:
+            light_quiet = self._in_quiet_hours("finish_light_quiet_hours")
+            if light_quiet:
                 self._log("Finish light skipped - quiet hours.")
             else:
                 self._cancel_timer("_finish_light_off_timer")
@@ -320,6 +332,12 @@ class PrintButlerPlugin(
             self._settings.get(["shared_light_peer_payload_on"]),
             json_key=self._settings.get(["shared_light_peer_json_key"]),
         )
+        if self._peer_states.get(topic) == val:
+            # Zigbee2MQTT republishes a device's whole state object on every
+            # minor sensor tick (power/voltage readings drift) - most of
+            # these messages carry no actual on/off change, so skip logging
+            # and recomputing for them entirely.
+            return
         self._peer_states[topic] = val
         self._log("Peer state -> {} = {}".format(topic, val))
         self._recompute_shared_light(reason="peer_state")
@@ -527,12 +545,17 @@ class PrintButlerPlugin(
 
     def _cooldown_loop(self):
         """
-        Runs for the plugin's whole lifetime, checked every ~10s. Mirrors a
-        plain "temperature below X for N minutes, and not printing" trigger -
-        it does not require a print to have just finished, matching the
-        original Home Assistant automation's actual behavior. This means it
-        starts counting immediately whenever armed+enabled+idle+cool, which
-        includes right after OctoPrint (re)starts if the printer already is.
+        Runs for the plugin's whole lifetime, checked every ~10s. Fires Safe
+        Shutdown once bed/nozzle stay below threshold for a sustained period
+        while the printer isn't printing - it does not require a print to
+        have just finished, matching the original Home Assistant
+        automation's "temperature below X for N minutes, not printing"
+        trigger. It DOES require having actually observed the printer hot
+        at some point since the watch last (re)armed, though: without that,
+        a routine OctoPrint restart while the printer just happens to
+        already be idle and cold would immediately start counting down and
+        false-trigger a shutdown a few minutes later, with no print or
+        heating ever having happened in that session.
         Auto-disarms itself after firing so it does not immediately loop.
         """
         was_active = None
@@ -542,16 +565,13 @@ class PrintButlerPlugin(
                 break
 
             try:
-                active = (
-                    self._get_bool("auto_shutdown_enabled")
-                    and self._get_bool("shutdown_enabled")
-                    and self._auto_shutdown_armed
-                )
+                active = self._get_bool("shutdown_enabled") and self._auto_shutdown_armed
                 if active != was_active:
                     self._log("Cooldown watch {}.".format("active" if active else "inactive"))
                     was_active = active
                 if not active:
                     self._cooldown_since = None
+                    self._cooldown_seen_hot = False
                     continue
 
                 if self._printer.is_printing() or self._printer.is_paused():
@@ -574,6 +594,11 @@ class PrintButlerPlugin(
 
                 now = time.time()
                 if is_cool:
+                    if not self._cooldown_seen_hot:
+                        # Never actually seen this printer hot since arming -
+                        # most likely already cold when the watch started,
+                        # not a genuine post-heat cooldown. Ignore.
+                        continue
                     if self._cooldown_since is None:
                         self._cooldown_since = now
                         self._log(
@@ -583,6 +608,7 @@ class PrintButlerPlugin(
                     elif now - self._cooldown_since >= confirm_secs:
                         self._log("Cooldown confirmed - triggering safe shutdown, disarming.")
                         self._cooldown_since = None
+                        self._cooldown_seen_hot = False
                         self._auto_shutdown_armed = False
                         self._plugin_manager.send_plugin_message(
                             self._identifier,
@@ -593,6 +619,7 @@ class PrintButlerPlugin(
                             daemon=True,
                         ).start()
                 else:
+                    self._cooldown_seen_hot = True
                     if self._cooldown_since is not None:
                         self._log("Temperature rose again, resetting cooldown timer.")
                     self._cooldown_since = None
@@ -603,7 +630,6 @@ class PrintButlerPlugin(
 
     def get_api_commands(self):
         return dict(
-            shutdown_now=[],
             clear_logs=[],
             set_armed=["armed"],
             test_finish_notify=[],
@@ -615,24 +641,7 @@ class PrintButlerPlugin(
     def on_api_command(self, command, data):
         self._plugin_log("API command received: {}".format(command))
 
-        if command == "shutdown_now":
-            if not self._get_bool("shutdown_enabled"):
-                return flask.jsonify({
-                    "success": False,
-                    "message": "Safe shutdown is disabled in settings.",
-                })
-            if self._shutdown_running:
-                return flask.jsonify({
-                    "success": False,
-                    "message": "A shutdown is already in progress.",
-                })
-            t = threading.Thread(
-                target=self._do_safe_shutdown, name="printbutler-shutdown", daemon=True
-            )
-            t.start()
-            return flask.jsonify({"success": True, "message": "Shutdown initiated."})
-
-        elif command == "clear_logs":
+        if command == "clear_logs":
             self._log_entries.clear()
             return flask.jsonify({"success": True})
 
@@ -645,6 +654,7 @@ class PrintButlerPlugin(
             )
             if not self._auto_shutdown_armed:
                 self._cooldown_since = None
+                self._cooldown_seen_hot = False
             self._plugin_manager.send_plugin_message(
                 self._identifier,
                 {"event": "armed_changed", "armed": self._auto_shutdown_armed},
@@ -730,11 +740,11 @@ class PrintButlerPlugin(
 
     # -- Quiet hours -------------------------------------------------------
 
-    def _in_quiet_hours(self):
-        if not self._get_bool("quiet_hours_enabled"):
+    def _in_quiet_hours(self, prefix="quiet_hours"):
+        if not self._get_bool(prefix + "_enabled"):
             return False
-        start = self._settings.get(["quiet_hours_start"]) or "22:00"
-        end = self._settings.get(["quiet_hours_end"]) or "10:00"
+        start = self._settings.get([prefix + "_start"]) or "22:00"
+        end = self._settings.get([prefix + "_end"]) or "10:00"
         try:
             sh, sm = (int(x) for x in start.split(":"))
             eh, em = (int(x) for x in end.split(":"))
@@ -795,7 +805,7 @@ class PrintButlerPlugin(
 __plugin_name__         = "PrintButler"
 __plugin_identifier__   = "printbutler"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.2.1"
+__plugin_version__      = "0.3.0"
 __plugin_description__  = (
     "Print-finished notifications, light/plug automation, and safe shutdown - "
     "all driven from OctoPrint's own state over MQTT, configurable from the "
