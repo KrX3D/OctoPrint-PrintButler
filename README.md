@@ -19,11 +19,10 @@ Each PrintButler instance controls **one printer** (the OctoPrint instance it's 
 ## Features
 
 - **Print Finished Notification** - publishes a configurable MQTT payload (e.g. to trigger a WLED effect) when a print completes, auto-reverting after a delay
-- **Quiet Hours** - suppresses the finish notification/light during a configurable time window (can cross midnight)
+- **Quiet Hours** - independent windows for the finish notification and the finish light (both can cross midnight)
 - **Finish Indicator Light** - a per-printer light/relay switched on when that printer finishes
-- **Printer Power Plug** - tracks and controls the smart plug powering the printer itself
-- **Shared Work Light** - a light/relay shared across printers, kept on while this printer or any configured peer is powered, with optional self-heal if something else switches it off
-- **Safe Shutdown** - runs a shutdown command on the OctoPrint host, then cuts mains power via MQTT after a configurable delay
+- **Shared Work Light** - a light/relay shared across printers, kept on while this printer (i.e. this OctoPrint instance is running) or any configured peer is powered, with optional self-heal if something else switches it off
+- **Safe Shutdown** - watches bed/nozzle temperature and, once cooled down after having been hot, publishes an MQTT trigger topic and runs a shutdown command on the host - actually cutting mains power is left to an external automation (e.g. Home Assistant) watching that topic, since a host can't reliably cut its own power
 - **Live log viewer** and status panel in the settings UI
 - **Enable / disable** switch without uninstalling
 
@@ -61,14 +60,15 @@ Open OctoPrint -> Settings -> **PrintButler**.
 
 | Tab | What it controls |
 |-----|-------------------|
-| **Print Finished** | Notification topic/payload on print completion, plus quiet hours |
-| **Finish Light** | Per-printer indicator light triggered on finish |
-| **Printer Plug** | This printer's power plug - state topic + control topic |
+| **Print Finished** | Notification topic/payload on print completion, plus its own quiet hours |
+| **Finish Light** | Per-printer indicator light triggered on finish, plus its own quiet hours |
 | **Shared Light** | Cross-printer work light, peer topics, optional self-heal |
-| **Safe Shutdown** | Shutdown command, power-off delay, manual trigger button |
+| **Safe Shutdown** | Bed/nozzle thresholds, shutdown command, MQTT trigger topic - fires automatically once cooled down after being hot, no manual trigger |
 | **Status / Log** | MQTT connection status, live values, action log |
 
 All MQTT topics/payloads are freeform text fields - point them at whatever your Zigbee2MQTT/Tasmota/WLED setup already uses.
+
+See [LEARNINGS.md](LEARNINGS.md) for the reasoning behind some of the less obvious design decisions (MQTT chattiness pitfalls, why safe shutdown can't cut its own power, etc.).
 
 ## License
 
