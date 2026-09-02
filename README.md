@@ -44,13 +44,15 @@ git clone https://github.com/KrX3D/OctoPrint-PrintButler.git
 ~/oprint/bin/pip install -e OctoPrint-PrintButler
 ```
 
-**To update:** there are no tagged GitHub releases yet, so OctoPrint's Plugin
-Manager "Update" button won't detect new commits on `main`. Use **Reinstall**
-instead (Plugin Manager -> PrintButler -> Reinstall), which always re-fetches
-the archive URL above regardless of version. After reinstalling, fully
-restart OctoPrint (not just the browser) and then hard-refresh the page
-(Ctrl+Shift+R) - the "Version:" label at the top of PrintButler's settings
-should match the version in this repo's `octoprint_printbutler/__init__.py`.
+**To update:** every merge that bumps `__plugin_version__` automatically gets
+a matching tagged GitHub Release (see `.github/workflows/tag-release-on-version-bump.yml`),
+so OctoPrint's Plugin Manager **Update** button should just work - check
+Settings -> Software Update, or use Plugin Manager -> PrintButler -> Update.
+**Reinstall** also still works as a fallback (always re-fetches the archive
+URL above regardless of version). Either way, fully restart OctoPrint (not
+just the browser) and hard-refresh the page (Ctrl+Shift+R) afterward - the
+"Version:" label at the top of PrintButler's settings should match the
+version in this repo's `octoprint_printbutler/__init__.py`.
 
 ---
 
