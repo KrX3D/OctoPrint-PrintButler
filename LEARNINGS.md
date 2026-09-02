@@ -76,14 +76,23 @@ see the PR history for that.
   own bundled navbar plugins (`announcements`, `health_check`) use a bare
   `<a class="pull-right">`. Wrapping in `<li>` breaks the DOM structure
   enough to interfere with both layout and Knockout bindings.
-- **No tagged GitHub releases means the Plugin Manager's "Update" button
-  never finds anything**, since `get_update_information()` (`type:
-  github_release`) compares against release tags, not commits. Until this
-  repo starts tagging releases, updates only actually land via **Reinstall**
-  (which re-fetches the archive URL regardless of version) - "Update" will
-  silently do nothing. Bump `__plugin_version__` on every PR anyway so the
-  settings page's "Version:" label gives an unambiguous way to confirm a
-  reinstall actually picked up new code.
+- **`type: github_release` compares against tagged releases, not commits on
+  main.** Every PR bumping `__plugin_version__` does nothing for the "Update"
+  button unless a matching GitHub Release is *also* tagged (bare semver, no
+  `v` prefix - checked against [jneilliii/OctoPrint-ActiveFiltersExtended](https://github.com/jneilliii/OctoPrint-ActiveFiltersExtended),
+  a real working example: tags `0.1.0`, `0.0.2`, no `v`). Until a release is
+  tagged for a given version, "Update" finds nothing and only **Reinstall**
+  (which re-fetches the archive URL regardless of version) actually picks up
+  new code. Bump the version on every PR regardless - it's still the only way
+  the settings page's "Version:" label can confirm a reinstall worked.
+- **The `pip=` URL template's placeholder is `{target_version}`, not
+  `{target}`.** OctoPrint's software update checker substitutes
+  `{target_version}` with the release tag when constructing the install
+  command; a template containing `{target}` instead just breaks silently (or
+  errors) since that key is never provided. This was wrong here for multiple
+  versions before being caught - always diff `get_update_information()`
+  against a known-working plugin (like the one linked above) rather than
+  trusting it because it "looks right".
 - **A `ko.computed` that short-circuits before reading an observable never
   subscribes to it**, and won't re-evaluate when that observable later
   changes. Read every observable your computed depends on unconditionally
