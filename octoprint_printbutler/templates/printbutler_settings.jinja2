@@ -182,7 +182,17 @@
                 <div class="controls">
                     <input type="number" min="0" style="width:80px;"
                            data-bind="value: settings.finish_light_turn_off_after, enable: settings.finish_light_enabled">
-                    <span class="help-inline muted">{{ _("0 = leave it on until the next print starts.") }}</span>
+                    <span class="help-inline muted">{{ _("0 = don't auto turn off on a timer.") }}</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="controls">
+                    <label class="checkbox">
+                        <input type="checkbox" data-bind="checked: settings.finish_light_off_on_print_start, enable: settings.finish_light_enabled">
+                        {{ _("Also turn off when a new print starts") }}
+                    </label>
+                    <span class="help-inline muted">{{ _("Disable if this light doubles as a general/manual light (e.g. a hardware button on the same relay) - otherwise starting a print always overrides a manual toggle.") }}</span>
                 </div>
             </div>
 

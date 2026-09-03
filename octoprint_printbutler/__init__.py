@@ -87,7 +87,14 @@ class PrintButlerPlugin(
             finish_light_payload_off="OFF",
             finish_light_qos=0,
             finish_light_retain=False,
-            finish_light_turn_off_after=0,  # 0 = leave on until next print starts
+            finish_light_turn_off_after=0,  # 0 = don't auto turn off on a timer
+            # If this light is also used as a general/manual light (e.g. a
+            # hardware button on the same relay), forcing it off whenever a
+            # print starts can fight with that manual control. Defaults to
+            # True (matches the original "reset the finish indicator when a
+            # new print starts" behavior) - disable if you want manual/
+            # hardware toggles to survive a new print starting.
+            finish_light_off_on_print_start=True,
 
             # Quiet hours for the finish light specifically - independent
             # window from the print-finished notification above.
@@ -243,7 +250,7 @@ class PrintButlerPlugin(
             self._recompute_shared_light(reason="print_done")
 
     def _handle_print_started(self):
-        if self._get_bool("finish_light_enabled"):
+        if self._get_bool("finish_light_enabled") and self._get_bool("finish_light_off_on_print_start"):
             self._cancel_timer("_finish_light_off_timer")
             self._set_finish_light(False)
 
@@ -805,7 +812,7 @@ class PrintButlerPlugin(
 __plugin_name__         = "PrintButler"
 __plugin_identifier__   = "printbutler"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.2"
+__plugin_version__      = "0.3.3"
 __plugin_description__  = (
     "Print-finished notifications, light/plug automation, and safe shutdown - "
     "all driven from OctoPrint's own state over MQTT, configurable from the "
