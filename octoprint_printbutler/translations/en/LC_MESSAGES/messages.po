@@ -89,8 +89,14 @@ msgstr "Turn on a light/relay when this printer finishes"
 msgid "Turn off after (seconds)"
 msgstr "Turn off after (seconds)"
 
-msgid "0 = leave it on until the next print starts."
-msgstr "0 = leave it on until the next print starts."
+msgid "0 = don't auto turn off on a timer."
+msgstr "0 = don't auto turn off on a timer."
+
+msgid "Also turn off when a new print starts"
+msgstr "Also turn off when a new print starts"
+
+msgid "Disable if this light doubles as a general/manual light (e.g. a hardware button on the same relay) - otherwise starting a print always overrides a manual toggle."
+msgstr "Disable if this light doubles as a general/manual light (e.g. a hardware button on the same relay) - otherwise starting a print always overrides a manual toggle."
 
 msgid "Set topic (publish)"
 msgstr "Set topic (publish)"

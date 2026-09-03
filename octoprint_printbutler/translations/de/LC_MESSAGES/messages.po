@@ -89,8 +89,14 @@ msgstr "Licht/Relais einschalten, wenn dieser Drucker fertig ist"
 msgid "Turn off after (seconds)"
 msgstr "Ausschalten nach (Sekunden)"
 
-msgid "0 = leave it on until the next print starts."
-msgstr "0 = an lassen, bis der nächste Druck startet."
+msgid "0 = don't auto turn off on a timer."
+msgstr "0 = nicht automatisch nach Zeit ausschalten."
+
+msgid "Also turn off when a new print starts"
+msgstr "Auch ausschalten, wenn ein neuer Druck startet"
+
+msgid "Disable if this light doubles as a general/manual light (e.g. a hardware button on the same relay) - otherwise starting a print always overrides a manual toggle."
+msgstr "Deaktivieren, wenn dieses Licht auch als allgemeines/manuelles Licht dient (z. B. über einen Hardware-Button am selben Relais) - sonst überschreibt ein Druckstart immer eine manuelle Umschaltung."
 
 msgid "Set topic (publish)"
 msgstr "Steuer-Topic (senden)"
