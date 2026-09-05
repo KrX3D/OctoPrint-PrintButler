@@ -63,6 +63,14 @@ see the PR history for that.
   plugin update, no print involved) - not just after a real print. Require
   having observed a hot reading since the watch last armed before a cool
   reading is allowed to start any countdown.
+- **A failed shutdown command must roll back the state it already changed.**
+  `_do_safe_shutdown` marks this printer inactive and publishes the "going
+  down" trigger *before* actually running the shutdown command (see above -
+  the trigger has to leave the host while it's still up). If `Popen` itself
+  raises (bad command, missing binary, no sudo), the host never actually
+  shuts down, so leaving `_this_printer_active` false and the trigger topic
+  "on" is actively dangerous: an automation watching that topic would cut
+  mains power to a printer that's still running. Revert both on failure.
 
 ## OctoPrint plugin mechanics
 
