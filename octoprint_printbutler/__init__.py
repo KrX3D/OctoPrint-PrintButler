@@ -512,6 +512,20 @@ class PrintButlerPlugin(
             except Exception as exc:
                 self._log("Shutdown command failed: {}".format(exc), "ERROR")
                 self._log(traceback.format_exc(), "DEBUG")
+                # The host isn't actually going down - undo the "this printer
+                # is gone" state and the trigger publish above, otherwise an
+                # external automation watching the trigger topic would cut
+                # mains power to a printer that's still very much running,
+                # and the shared light would stay wrongly marked off until
+                # the next OctoPrint restart.
+                self._this_printer_active = True
+                if self._get_bool("shared_light_enabled"):
+                    self._recompute_shared_light(reason="shutdown_failed")
+                if self._settings.get(["shutdown_trigger_topic"]):
+                    self._set_shutdown_trigger(False)
+                self._log("Safe shutdown aborted - host is still up.", "ERROR")
+                self._log("=" * 60)
+                return
 
             self._log("Safe shutdown sequence complete - host is going down.")
             self._log("=" * 60)
@@ -812,7 +826,7 @@ class PrintButlerPlugin(
 __plugin_name__         = "PrintButler"
 __plugin_identifier__   = "printbutler"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.3"
+__plugin_version__      = "0.3.4"
 __plugin_description__  = (
     "Print-finished notifications, light/plug automation, and safe shutdown - "
     "all driven from OctoPrint's own state over MQTT, configurable from the "
