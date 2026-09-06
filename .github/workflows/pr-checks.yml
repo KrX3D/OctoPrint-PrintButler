@@ -1,0 +1,48 @@
+name: PR checks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install flake8
+        run: python -m pip install --quiet flake8
+
+      - name: Fail on syntax errors / undefined names
+        run: flake8 --select=E9,F63,F7,F82 --show-source octoprint_printbutler/ setup.py
+
+      - name: Lint (non-blocking style report)
+        run: flake8 --exit-zero octoprint_printbutler/ setup.py
+
+      - name: Byte-compile all Python sources
+        run: python -m compileall -q octoprint_printbutler/ setup.py
+
+  translations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install gettext
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext
+
+      - name: Validate .po catalogs compile cleanly
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' po; do
+            msgfmt --check --statistics "$po" -o /dev/null
+          done < <(find octoprint_printbutler/translations -type f -name "*.po" -print0)
