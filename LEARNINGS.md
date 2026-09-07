@@ -184,3 +184,16 @@ see the PR history for that.
   must be connected, etc.). Not worth the extra complexity/risk for a
   cleanup convenience feature - skip and log if the finished print's
   `origin` isn't `FileDestinations.LOCAL`.
+- **`self._settings.set_xxx(path, value)` silently deletes the key instead
+  of storing it whenever `value` equals that key's default** (that's what
+  `force=False`, the default, does - it's how OctoPrint keeps `config.yaml`
+  free of redundant "explicitly set to the default" entries). For a toggle
+  whose default is `False`, this means every "turn it off" call takes a
+  structurally different code path through the settings layer than every
+  "turn it on" call. `armed` never hit this because it's a plain instance
+  attribute, never routed through settings at all - the very first plugin
+  setting that's both defaulted to `False` *and* toggled from outside the
+  normal Settings-dialog Save flow (`delete_finished_file_enabled`, via the
+  sidebar) hit it immediately, looking like "the checkbox can't be
+  unchecked." Pass `force=True` on a settings write you want stored
+  unconditionally regardless of the default.
