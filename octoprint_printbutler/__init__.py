@@ -706,6 +706,7 @@ class PrintButlerPlugin(
         return dict(
             clear_logs=[],
             set_armed=["armed"],
+            set_delete_finished_file_enabled=["enabled"],
             test_finish_notify=[],
             test_finish_light=[],
             test_shared_light=[],
@@ -734,6 +735,21 @@ class PrintButlerPlugin(
                 {"event": "armed_changed", "armed": self._auto_shutdown_armed},
             )
             return flask.jsonify({"success": True, "armed": self._auto_shutdown_armed})
+
+        elif command == "set_delete_finished_file_enabled":
+            # Unlike set_armed above, this flips a real persisted setting
+            # (not a runtime-only flag) - explicit set_boolean()+save() so
+            # the sidebar checkbox can change it immediately without
+            # waiting for the Settings dialog's own Save button.
+            enabled = bool(data.get("enabled"))
+            self._settings.set_boolean(["delete_finished_file_enabled"], enabled)
+            self._settings.save()
+            self._log("Delete-file-after-print {}.".format("enabled" if enabled else "disabled"))
+            self._plugin_manager.send_plugin_message(
+                self._identifier,
+                {"event": "delete_finished_file_enabled_changed", "enabled": enabled},
+            )
+            return flask.jsonify({"success": True, "delete_finished_file_enabled": enabled})
 
         elif command == "test_finish_notify":
             if not self._publish_finish_notify(overrides=data):
@@ -809,6 +825,7 @@ class PrintButlerPlugin(
             auto_shutdown_armed=self._auto_shutdown_armed,
             cooldown_counting=self._cooldown_since is not None,
             cooldown_seconds_remaining=cooldown_seconds_remaining,
+            delete_finished_file_enabled=self._get_bool("delete_finished_file_enabled"),
             logs=list(self._log_entries),
         ))
 
@@ -879,7 +896,7 @@ class PrintButlerPlugin(
 __plugin_name__         = "PrintButler"
 __plugin_identifier__   = "printbutler"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.4.0"
+__plugin_version__      = "0.4.1"
 __plugin_description__  = (
     "Print-finished notifications, light/plug automation, and safe shutdown - "
     "all driven from OctoPrint's own state over MQTT, configurable from the "

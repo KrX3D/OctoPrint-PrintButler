@@ -1,29 +1,28 @@
 {# OctoPrint-PrintButler - printbutler_sidebar.jinja2 #}
 
-<div class="control-group" style="margin-bottom:6px;">
-    <label class="checkbox" style="margin:0; cursor:pointer;">
-        <input type="checkbox" data-bind="checked: settings.shutdown_enabled, click: toggleShutdownEnabled">
-        {{ _("Enable Safe Shutdown") }}
-    </label>
-</div>
 <!-- ko if: autoShutdownFeatureEnabled -->
-<div class="control-group" style="margin:0 0 6px 20px;">
+<div class="control-group" style="margin-bottom:6px;">
     <label class="checkbox" style="margin:0; cursor:pointer;">
         <input type="checkbox" data-bind="checked: armed, click: toggleArmed">
         {{ _("Auto-shutdown when cool") }}
     </label>
 </div>
-<p class="muted" style="margin:0 0 10px 20px; font-size:11px;" data-bind="visible: !cooldownCounting()">
+<p class="muted" style="margin:0 0 10px; font-size:11px;" data-bind="visible: !cooldownCounting()">
     <span data-bind="text: armedTooltip"></span>
 </p>
-<p class="muted" style="margin:0 0 10px 20px; font-size:11px;" data-bind="visible: cooldownCounting">
+<p class="muted" style="margin:0 0 10px; font-size:11px;" data-bind="visible: cooldownCounting">
     {{ _("Cooling down - shutdown in") }} <strong data-bind="text: cooldownSecondsText"></strong>
+</p>
+<!-- /ko -->
+<!-- ko ifnot: autoShutdownFeatureEnabled -->
+<p class="muted" style="margin:0 0 10px; font-size:11px;">
+    {{ _("Enable Safe Shutdown in PrintButler's settings to arm/disarm it here.") }}
 </p>
 <!-- /ko -->
 
 <div class="control-group" style="margin-bottom:0;">
     <label class="checkbox" style="margin:0; cursor:pointer;">
-        <input type="checkbox" data-bind="checked: settings.delete_finished_file_enabled, click: toggleDeleteFinishedFile">
+        <input type="checkbox" data-bind="checked: deleteFinishedFileEnabled, click: toggleDeleteFinishedFile">
         {{ _("Delete file after successful print") }}
     </label>
 </div>
