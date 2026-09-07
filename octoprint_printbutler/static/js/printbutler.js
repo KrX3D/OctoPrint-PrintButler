@@ -28,6 +28,7 @@ $(function () {
         self.sharedLightDesired = ko.observable(null);
         self.quietHoursActive   = ko.observable(null);
         self.armed                = ko.observable(true);
+        self.deleteFinishedFileEnabled = ko.observable(false);
         self.cooldownCounting          = ko.observable(false);
         self.cooldownSecondsRemaining  = ko.observable(null);
         self.logs                = ko.observableArray([]);
@@ -126,6 +127,9 @@ $(function () {
             if (plugin !== "printbutler" || !data || !data.event) { return; }
             if (data.event === "armed_changed") {
                 self.armed(data.armed === true);
+            } else if (data.event === "delete_finished_file_enabled_changed") {
+                self.deleteFinishedFileEnabled(data.enabled === true);
+                if (self.settings) { self.settings.delete_finished_file_enabled(data.enabled === true); }
             }
         };
 
@@ -141,6 +145,17 @@ $(function () {
                     self.sharedLightDesired(data.shared_light_desired);
                     self.quietHoursActive(data.quiet_hours_active === true);
                     self.armed(data.auto_shutdown_armed !== false);
+                    // Deliberately NOT also writing this into
+                    // self.settings.delete_finished_file_enabled here: this
+                    // poll runs every 5s regardless of what else is
+                    // happening, and stomping that shared, Settings-dialog-
+                    // bound observable on every tick could revert an edit
+                    // the user just made in the Settings dialog but hasn't
+                    // saved yet. Only sync it on an explicit, confirmed
+                    // change (toggleDeleteFinishedFile's success handler and
+                    // the delete_finished_file_enabled_changed plugin
+                    // message below) - never from a routine status refresh.
+                    self.deleteFinishedFileEnabled(data.delete_finished_file_enabled === true);
                     self.cooldownCounting(data.cooldown_counting === true);
                     self.cooldownSecondsRemaining(
                         typeof data.cooldown_seconds_remaining === "number"
@@ -170,28 +185,28 @@ $(function () {
                 });
         };
 
-        // shutdown_enabled/delete_finished_file_enabled are real persisted
-        // settings, not runtime-only flags like armed - self.settings.<key>
-        // is the exact same observable settingsViewModel itself uses, so
-        // the checkbox's two-way `checked` binding already keeps every
-        // other bound copy (e.g. the Settings dialog) in sync for free.
-        // This just needs to persist that already-updated value to the
-        // server without waiting for the Settings dialog's own Save button,
-        // and roll it back everywhere if that fails.
-        self._saveBoolSetting = function (key, next) {
-            var patch = {plugins: {printbutler: {}}};
-            patch.plugins.printbutler[key] = next;
-            OctoPrint.settings.save(patch)
+        // delete_finished_file_enabled is a real persisted setting (unlike
+        // armed), but toggled from the sidebar the same dedicated-observable
+        // + custom-API-command way as armed above, deliberately NOT via a
+        // two-way binding straight onto settings.delete_finished_file_enabled
+        // plus OctoPrint.settings.save() - that seemed simpler, but tying
+        // the sidebar checkbox directly to the same shared, globally-remapped
+        // settings observable OctoPrint's core Settings dialog also owns
+        // made it unreliable in practice (see LEARNINGS.md). A plugin-owned
+        // observable, explicitly persisted server-side, is the same
+        // approach that already works correctly for armed.
+        self.toggleDeleteFinishedFile = function (data, event) {
+            var next = event.target.checked;
+            OctoPrint.simpleApiCommand("printbutler", "set_delete_finished_file_enabled", {enabled: next})
+                .done(function (data) {
+                    var enabled = data.delete_finished_file_enabled === true;
+                    self.deleteFinishedFileEnabled(enabled);
+                    if (self.settings) { self.settings.delete_finished_file_enabled(enabled); }
+                })
                 .fail(function () {
-                    self.settings[key](!next);
+                    self.deleteFinishedFileEnabled(!next);
                     new PNotify({title: tr("PrintButler"), text: tr("Request failed."), type: "error"});
                 });
-        };
-        self.toggleShutdownEnabled = function (data, event) {
-            self._saveBoolSetting("shutdown_enabled", event.target.checked);
-        };
-        self.toggleDeleteFinishedFile = function (data, event) {
-            self._saveBoolSetting("delete_finished_file_enabled", event.target.checked);
         };
 
         self._runTest = function (command, busyObservable, extraData) {

@@ -152,16 +152,31 @@ see the PR history for that.
   gets assigned there rather than at construction), so by then reading
   `self.settings.shutdown_enabled()` unconditionally is both safe and
   correctly reactive.
-- **A sidebar checkbox can persist a real plugin setting immediately,
-  without waiting for the Settings dialog's Save button** - bind it two-way
-  to `settings.<key>` like any Settings-dialog field would (it's the exact
-  same shared observable `settingsViewModel` itself owns, so every other
-  place that reads it, e.g. the Settings dialog, updates for free the
-  instant it's clicked), then in a `click` handler call
-  `OctoPrint.settings.save({plugins: {<id>: {<key>: value}}})` with just
-  that one key. OctoPrint's settings save merges a partial patch against
-  the full settings tree, so sibling keys are left untouched - no need to
-  round-trip the whole plugin settings object just to flip one flag.
+- **Don't bind a sidebar checkbox two-way onto `settings.<key>` plus a
+  `click` handler calling `OctoPrint.settings.save(...)` to persist it
+  immediately.** This looked like the obvious way to let a sidebar control
+  edit a real plugin setting without waiting for the Settings dialog's Save
+  button - reuse the same shared observable `settingsViewModel` already
+  owns, then push just that one key via a partial `OctoPrint.settings.save`
+  patch. In practice it was unreliable: clicking the checkbox worked once,
+  then further clicks stopped taking effect, and the Settings dialog could
+  end up showing a different value than what was actually persisted.
+  `OctoPrint.settings.save()`'s response causes OctoPrint core to remap the
+  *entire* settings tree back onto the shared observables
+  (`ko.mapping.fromJS(response, self.settings)`), so a save triggered from
+  outside the normal Settings-dialog flow can race with or clobber the very
+  value it just set, and everything bound to that shared observable (both
+  the sidebar and the Settings dialog) inherits whatever confusion results.
+  The reliable fix: give the sidebar control its own plugin-owned
+  observable (`ko.observable`, not `settings.<key>`) and a dedicated
+  `SimpleApiPlugin` command that explicitly does
+  `self._settings.set_boolean([...], value); self._settings.save()`
+  server-side - the exact same pattern this plugin already used for `armed`
+  before this setting existed. Sync the Settings-dialog's own observable
+  from that command's response (and from a `send_plugin_message` push, for
+  other open tabs) only on a confirmed, explicit change - never from the
+  periodic status-refresh poll, which would otherwise stomp an unsaved
+  in-progress edit in the Settings dialog every few seconds.
 - **Only delete local files, never SD-card ones, from a "delete after
   print" style feature.** `self._file_manager.remove_file()` only handles
   local storage; removing an SD-card file needs a different call
