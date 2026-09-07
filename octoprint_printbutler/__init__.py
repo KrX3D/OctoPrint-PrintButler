@@ -907,7 +907,7 @@ class PrintButlerPlugin(
 __plugin_name__         = "PrintButler"
 __plugin_identifier__   = "printbutler"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.4.3"
+__plugin_version__      = "0.4.4"
 __plugin_description__  = (
     "Print-finished notifications, light/plug automation, and safe shutdown - "
     "all driven from OctoPrint's own state over MQTT, configurable from the "

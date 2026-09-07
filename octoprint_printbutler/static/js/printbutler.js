@@ -31,6 +31,10 @@ $(function () {
         self.armedBusy             = ko.observable(false);
         self.deleteFinishedFileEnabled = ko.observable(false);
         self.deleteFinishedFileBusy    = ko.observable(false);
+        // Bumped by toggleArmed/toggleDeleteFinishedFile every time either
+        // one actually sends a request - see refreshStatus for why.
+        self._armedGeneration              = 0;
+        self._deleteFinishedFileGeneration = 0;
         self.cooldownCounting          = ko.observable(false);
         self.cooldownSecondsRemaining  = ko.observable(null);
         self.logs                = ko.observableArray([]);
@@ -138,6 +142,18 @@ $(function () {
         // -- API -------------------------------------------------------
 
         self.refreshStatus = function () {
+            // Captured *before* sending the request: if a toggle completes
+            // between now and when this response arrives, the generation
+            // will have moved on, and this response's value for that one
+            // field is a stale, pre-toggle snapshot - a slow/overlapping
+            // poll (this runs on a fixed 5s timer regardless of anything
+            // else in flight) could otherwise arrive *after* a toggle's own
+            // response and silently stomp the just-applied new value back
+            // to the old one. Everything else in this response is still
+            // applied normally - only armed/deleteFinishedFileEnabled are
+            // also independently toggle-able from outside this poll.
+            var armedGenAtRequest             = self._armedGeneration;
+            var deleteFileGenAtRequest        = self._deleteFinishedFileGeneration;
             OctoPrint.get("api/plugin/printbutler")
                 .done(function (data) {
                     self.pluginVersion(data.plugin_version || "?");
@@ -146,7 +162,9 @@ $(function () {
                     self.thisPrinterActive(data.this_printer_active !== false);
                     self.sharedLightDesired(data.shared_light_desired);
                     self.quietHoursActive(data.quiet_hours_active === true);
-                    self.armed(data.auto_shutdown_armed !== false);
+                    if (armedGenAtRequest === self._armedGeneration) {
+                        self.armed(data.auto_shutdown_armed !== false);
+                    }
                     // Deliberately NOT also writing this into
                     // self.settings.delete_finished_file_enabled here: this
                     // poll runs every 5s regardless of what else is
@@ -157,7 +175,9 @@ $(function () {
                     // change (toggleDeleteFinishedFile's success handler and
                     // the delete_finished_file_enabled_changed plugin
                     // message below) - never from a routine status refresh.
-                    self.deleteFinishedFileEnabled(data.delete_finished_file_enabled === true);
+                    if (deleteFileGenAtRequest === self._deleteFinishedFileGeneration) {
+                        self.deleteFinishedFileEnabled(data.delete_finished_file_enabled === true);
+                    }
                     self.cooldownCounting(data.cooldown_counting === true);
                     self.cooldownSecondsRemaining(
                         typeof data.cooldown_seconds_remaining === "number"
@@ -184,6 +204,7 @@ $(function () {
             if (self.armedBusy()) { return; }
             var next = event.target.checked;
             self.armedBusy(true);
+            self._armedGeneration++;
             OctoPrint.simpleApiCommand("printbutler", "set_armed", {armed: next})
                 .done(function (data) {
                     self.armed(data.armed === true);
@@ -209,6 +230,7 @@ $(function () {
             if (self.deleteFinishedFileBusy()) { return; }
             var next = event.target.checked;
             self.deleteFinishedFileBusy(true);
+            self._deleteFinishedFileGeneration++;
             OctoPrint.simpleApiCommand("printbutler", "set_delete_finished_file_enabled", {enabled: next})
                 .done(function (data) {
                     var enabled = data.delete_finished_file_enabled === true;
