@@ -125,3 +125,12 @@ see the PR history for that.
   changes. Read every observable your computed depends on unconditionally
   (or guard the whole thing so the short-circuit only ever happens once,
   before any real data exists) rather than early-returning past one.
+  This bit `autoShutdownFeatureEnabled` for real: it guarded with
+  `self.settings && self.settings.shutdown_enabled()`, where `self.settings`
+  is only assigned later in `onBeforeBinding` - so on the computed's first,
+  eager evaluation (during construction, `self.settings` still `null`) the
+  `&&` short-circuited before `shutdown_enabled()` was ever called, and the
+  computed locked onto `false` forever, regardless of the actual setting.
+  Fixed by reading `self.settingsViewModel.settings.plugins.printbutler...`
+  directly instead - that's a real constructor parameter, present
+  unconditionally from the start, so nothing short-circuits.
