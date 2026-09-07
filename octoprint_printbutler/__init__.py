@@ -158,6 +158,21 @@ class PrintButlerPlugin(
                 custom_bindings=True,
                 template="printbutler_navbar.jinja2",
             ),
+            # OctoPrint always places plugin sidebar sections below the
+            # built-in Connection/State/Files ones and gives plugins no way
+            # to inject content inside a core panel (e.g. between the State
+            # panel's progress bar and its Print/Pause/Cancel buttons)
+            # without fully replacing that panel and reimplementing all of
+            # its own behavior. A separate section here is the safe option -
+            # the instance owner can drag it higher via Settings ->
+            # Appearance -> Sidebar if they want it closer to State.
+            dict(
+                type="sidebar",
+                name="PrintButler",
+                icon="snowflake",
+                custom_bindings=True,
+                template="printbutler_sidebar.jinja2",
+            ),
         ]
 
     # -- AssetPlugin -----------------------------------------------------------
@@ -826,7 +841,7 @@ class PrintButlerPlugin(
 __plugin_name__         = "PrintButler"
 __plugin_identifier__   = "printbutler"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.4"
+__plugin_version__      = "0.3.5"
 __plugin_description__  = (
     "Print-finished notifications, light/plug automation, and safe shutdown - "
     "all driven from OctoPrint's own state over MQTT, configurable from the "
