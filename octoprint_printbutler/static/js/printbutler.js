@@ -69,12 +69,18 @@ $(function () {
             return boolText(self.quietHoursActive(), tr("Yes"), tr("No"), tr("Unknown"));
         });
 
+        // Reads settingsViewModel directly (available immediately as a
+        // constructor parameter) rather than via the self.settings alias,
+        // which is still null at this point - onBeforeBinding (where it
+        // gets set) only runs later. A ko.computed evaluates its function
+        // immediately on creation to find its dependencies; short-circuiting
+        // past shutdown_enabled() here (via `self.settings &&`) on that
+        // first, settings-less pass meant it never actually got read, so
+        // this permanently locked in "false" and never subscribed to it -
+        // exactly the ko.computed pitfall LEARNINGS.md already warns about.
         self.autoShutdownFeatureEnabled = ko.computed(function () {
-            try {
-                var shutdownOn = self.settings && self.settings.shutdown_enabled();
-                return shutdownOn === true || shutdownOn === "true";
-            }
-            catch (e) { return false; }
+            var shutdownOn = self.settingsViewModel.settings.plugins.printbutler.shutdown_enabled();
+            return shutdownOn === true || shutdownOn === "true";
         });
 
         self.cooldownSecondsText = ko.computed(function () {
