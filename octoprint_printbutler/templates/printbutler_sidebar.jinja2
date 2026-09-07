@@ -3,7 +3,7 @@
 <!-- ko if: autoShutdownFeatureEnabled -->
 <div class="control-group" style="margin-bottom:6px;">
     <label class="checkbox" style="margin:0; cursor:pointer;">
-        <input type="checkbox" data-bind="checked: armed, click: toggleArmed">
+        <input type="checkbox" data-bind="checked: armed, enable: !armedBusy(), click: toggleArmed">
         {{ _("Auto-shutdown when cool") }}
     </label>
 </div>
@@ -22,7 +22,7 @@
 
 <div class="control-group" style="margin-bottom:0;">
     <label class="checkbox" style="margin:0; cursor:pointer;">
-        <input type="checkbox" data-bind="checked: deleteFinishedFileEnabled, click: toggleDeleteFinishedFile">
+        <input type="checkbox" data-bind="checked: deleteFinishedFileEnabled, enable: !deleteFinishedFileBusy(), click: toggleDeleteFinishedFile">
         {{ _("Delete file after successful print") }}
     </label>
 </div>
