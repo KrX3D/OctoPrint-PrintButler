@@ -69,19 +69,15 @@ $(function () {
             return boolText(self.quietHoursActive(), tr("Yes"), tr("No"), tr("Unknown"));
         });
 
-        // Reads settingsViewModel directly (available immediately as a
-        // constructor parameter) rather than via the self.settings alias,
-        // which is still null at this point - onBeforeBinding (where it
-        // gets set) only runs later. A ko.computed evaluates its function
-        // immediately on creation to find its dependencies; short-circuiting
-        // past shutdown_enabled() here (via `self.settings &&`) on that
-        // first, settings-less pass meant it never actually got read, so
-        // this permanently locked in "false" and never subscribed to it -
-        // exactly the ko.computed pitfall LEARNINGS.md already warns about.
-        self.autoShutdownFeatureEnabled = ko.computed(function () {
-            var shutdownOn = self.settingsViewModel.settings.plugins.printbutler.shutdown_enabled();
-            return shutdownOn === true || shutdownOn === "true";
-        });
+        // autoShutdownFeatureEnabled itself is created in onBeforeBinding,
+        // below - not here. settingsViewModel.settings.plugins.printbutler
+        // isn't guaranteed populated yet at construction time (it's filled
+        // in later, asynchronously) and a ko.computed evaluates its
+        // function immediately to find its dependencies - reading it here
+        // would throw and abort building this entire viewmodel, silently
+        // leaving every binding on this plugin's settings/navbar/sidebar
+        // templates unwired. onBeforeBinding is guaranteed to run only
+        // once that data actually exists (see self.settings below).
 
         self.cooldownSecondsText = ko.computed(function () {
             var s = self.cooldownSecondsRemaining();
@@ -98,6 +94,15 @@ $(function () {
 
         self.onBeforeBinding = function () {
             self.settings = self.settingsViewModel.settings.plugins.printbutler;
+
+            // Created here, not at construction time: self.settings is
+            // real by now (unlike at construction), so this reads
+            // shutdown_enabled() unconditionally on every evaluation and
+            // correctly subscribes to it - no short-circuit, no crash.
+            self.autoShutdownFeatureEnabled = ko.computed(function () {
+                var shutdownOn = self.settings.shutdown_enabled();
+                return shutdownOn === true || shutdownOn === "true";
+            });
         };
 
         self.onSettingsShown = function () {
