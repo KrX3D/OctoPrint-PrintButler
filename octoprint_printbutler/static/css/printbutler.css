@@ -51,7 +51,10 @@
     border-bottom: 1px solid #e0e0e0;
     font-size: 13px;
     font-weight: 600;
-    color: #444;
+    /* No explicit color: this sits directly on the tab-content background,
+       which a dark theme (e.g. Themeify) repaints - pinning a light-mode
+       gray here made it unreadable against a dark background. Inherit
+       whatever text color the active theme already uses for headings. */
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -70,14 +73,23 @@
     margin-bottom: 14px;
     color: #333;
 }
+#settings_plugin_printbutler .printbutler-master-toggle input[type="checkbox"] {
+    /* Bootstrap 2's global input[type=checkbox] rule adds a 4px top
+       margin, which throws off align-items:center in this flex row -
+       the checkbox ends up visibly lower than the label/version text
+       next to it. Zero it out so all three sit on the same center line. */
+    margin: 0;
+}
 #settings_plugin_printbutler .printbutler-master-toggle label {
     font-size: 14px;
     font-weight: 700;
     margin: 0;
+    line-height: 1;
     cursor: pointer;
     color: #333;
 }
 #settings_plugin_printbutler .printbutler-master-toggle .muted {
+    line-height: 1;
     color: #777;
 }
 
