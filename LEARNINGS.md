@@ -197,3 +197,16 @@ see the PR history for that.
   sidebar) hit it immediately, looking like "the checkbox can't be
   unchecked." Pass `force=True` on a settings write you want stored
   unconditionally regardless of the default.
+- **Any sidebar/navbar control that fires an API command on click needs a
+  busyObservable guard, the same way the settings-page Test buttons already
+  had one.** Without it, the PrintButler log showed a single intended click
+  producing a *burst* of several identical `set_armed`/
+  `set_delete_finished_file_enabled` calls in a row - whatever the deeper
+  cause (this wasn't fully root-caused), the effect was a pile of pending
+  requests that made the whole OctoPrint page feel frozen (unrelated
+  buttons like Connect included) while they were all in flight. A
+  `busyObservable` checked at the top of the handler, set for the duration
+  of the request, and bound to the checkbox's own `enable` in the template
+  closes this off unconditionally: a control that's disabled while a
+  request is in flight physically cannot fire a second one, regardless of
+  what would otherwise have triggered the repeat.

@@ -28,7 +28,9 @@ $(function () {
         self.sharedLightDesired = ko.observable(null);
         self.quietHoursActive   = ko.observable(null);
         self.armed                = ko.observable(true);
+        self.armedBusy             = ko.observable(false);
         self.deleteFinishedFileEnabled = ko.observable(false);
+        self.deleteFinishedFileBusy    = ko.observable(false);
         self.cooldownCounting          = ko.observable(false);
         self.cooldownSecondsRemaining  = ko.observable(null);
         self.logs                = ko.observableArray([]);
@@ -170,11 +172,18 @@ $(function () {
                 });
         };
 
-        // The sidebar checkbox's native click + KO's checked binding have
-        // already flipped event.target.checked to the new value by the
-        // time this runs, so read it directly rather than negating armed().
+        // Guarded by armedBusy - and the template also disables the
+        // checkbox itself while busy (`enable: !armedBusy()`), so a click
+        // can't even register until the previous request finishes. The
+        // server log showed a burst of several identical requests logged
+        // for what should have been a single click, piling up pending
+        // requests and making the whole page feel unresponsive while they
+        // were all in flight - this closes that off regardless of what was
+        // actually causing the repeats.
         self.toggleArmed = function (data, event) {
+            if (self.armedBusy()) { return; }
             var next = event.target.checked;
+            self.armedBusy(true);
             OctoPrint.simpleApiCommand("printbutler", "set_armed", {armed: next})
                 .done(function (data) {
                     self.armed(data.armed === true);
@@ -182,7 +191,8 @@ $(function () {
                 .fail(function () {
                     self.armed(!next);
                     new PNotify({title: tr("PrintButler"), text: tr("Request failed."), type: "error"});
-                });
+                })
+                .always(function () { self.armedBusy(false); });
         };
 
         // delete_finished_file_enabled is a real persisted setting (unlike
@@ -196,7 +206,9 @@ $(function () {
         // observable, explicitly persisted server-side, is the same
         // approach that already works correctly for armed.
         self.toggleDeleteFinishedFile = function (data, event) {
+            if (self.deleteFinishedFileBusy()) { return; }
             var next = event.target.checked;
+            self.deleteFinishedFileBusy(true);
             OctoPrint.simpleApiCommand("printbutler", "set_delete_finished_file_enabled", {enabled: next})
                 .done(function (data) {
                     var enabled = data.delete_finished_file_enabled === true;
@@ -206,7 +218,8 @@ $(function () {
                 .fail(function () {
                     self.deleteFinishedFileEnabled(!next);
                     new PNotify({title: tr("PrintButler"), text: tr("Request failed."), type: "error"});
-                });
+                })
+                .always(function () { self.deleteFinishedFileBusy(false); });
         };
 
         self._runTest = function (command, busyObservable, extraData) {
