@@ -741,8 +741,19 @@ class PrintButlerPlugin(
             # (not a runtime-only flag) - explicit set_boolean()+save() so
             # the sidebar checkbox can change it immediately without
             # waiting for the Settings dialog's own Save button.
+            #
+            # force=True matters here specifically: OctoPrint's settings
+            # layer treats "set to the same value as the default" as "no
+            # override needed" and DELETES the key instead of storing it -
+            # harmless for a value that only round-trips through settings,
+            # but the default for this key is False, so every "uncheck"
+            # hit exactly that path while every "check" (True, not the
+            # default) stored normally. force=True stores the explicit
+            # value unconditionally either way. armed never needed this -
+            # it's a plain instance attribute, not a persisted setting.
+            self._log("set_delete_finished_file_enabled raw payload: {}".format(data), "DEBUG")
             enabled = bool(data.get("enabled"))
-            self._settings.set_boolean(["delete_finished_file_enabled"], enabled)
+            self._settings.set_boolean(["delete_finished_file_enabled"], enabled, force=True)
             self._settings.save()
             self._log("Delete-file-after-print {}.".format("enabled" if enabled else "disabled"))
             self._plugin_manager.send_plugin_message(
@@ -896,7 +907,7 @@ class PrintButlerPlugin(
 __plugin_name__         = "PrintButler"
 __plugin_identifier__   = "printbutler"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.4.1"
+__plugin_version__      = "0.4.2"
 __plugin_description__  = (
     "Print-finished notifications, light/plug automation, and safe shutdown - "
     "all driven from OctoPrint's own state over MQTT, configurable from the "
