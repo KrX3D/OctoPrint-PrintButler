@@ -84,6 +84,23 @@ see the PR history for that.
   own bundled navbar plugins (`announcements`, `health_check`) use a bare
   `<a class="pull-right">`. Wrapping in `<li>` breaks the DOM structure
   enough to interfere with both layout and Knockout bindings.
+- **A plugin's `type: "sidebar"` template can't be inserted inside an
+  existing core panel** (e.g. between the State panel's progress bar and its
+  Print/Pause/Cancel buttons) - plugin sidebar sections are always appended
+  below the built-in Connection/State/Files ones, as their own separate
+  accordion section. The only way to land content literally inside a core
+  panel is `replaces`, which means reimplementing that panel's entire markup
+  and behavior yourself and keeping it in sync with OctoPrint core forever.
+  Not worth it for one checkbox - a small dedicated sidebar section is the
+  safe choice (the instance owner can still drag it wherever they want via
+  Settings -> Appearance -> Sidebar).
+- **A Knockout `checked` binding on a real `<input type="checkbox">` has
+  already flipped by the time a same-element `click` handler runs.** Don't
+  compute the new desired state as `!observable()` inside that handler (a
+  leftover pattern from a plain non-checkbox click target like the navbar
+  icon) - read `event.target.checked` directly instead, and roll the
+  observable back in `.fail()` if the API call the click triggered doesn't
+  confirm it.
 - **`type: github_release` compares against tagged releases, not commits on
   main.** A version bump alone does nothing for the "Update" button unless a
   matching GitHub Release is *also* tagged (bare semver, no `v` prefix -

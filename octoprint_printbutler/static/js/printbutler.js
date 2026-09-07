@@ -96,21 +96,19 @@ $(function () {
 
         self.onSettingsShown = function () {
             self.refreshStatus();
-
-            self.statusPolling = setInterval(function () {
-                self.refreshStatus();
-            }, 5000);
-        };
-
-        self.onSettingsHidden = function () {
-            if (self.statusPolling) {
-                clearInterval(self.statusPolling);
-                self.statusPolling = null;
-            }
         };
 
         self.onStartupComplete = function () {
             self.refreshStatus();
+
+            // Runs for as long as this page is open, not just while the
+            // Settings dialog is shown - the sidebar panel now also needs
+            // a live "armed"/cooldown-countdown display on the main GUI.
+            if (!self.statusPolling) {
+                self.statusPolling = setInterval(function () {
+                    self.refreshStatus();
+                }, 5000);
+            }
         };
 
         self.onDataUpdaterPluginMessage = function (plugin, data) {
@@ -146,13 +144,20 @@ $(function () {
                 });
         };
 
-        self.toggleArmed = function () {
-            var next = !self.armed();
+        // Shared by the navbar icon (a plain click, no native checked state)
+        // and the sidebar checkbox (checked: armed already flips it, and
+        // KO's checked binding, natively before this handler runs - so read
+        // that directly there instead of guessing via negation).
+        self.toggleArmed = function (data, event) {
+            var next = (event && event.target && typeof event.target.checked === "boolean")
+                ? event.target.checked
+                : !self.armed();
             OctoPrint.simpleApiCommand("printbutler", "set_armed", {armed: next})
                 .done(function (data) {
                     self.armed(data.armed === true);
                 })
                 .fail(function () {
+                    self.armed(!next);
                     new PNotify({title: tr("PrintButler"), text: tr("Request failed."), type: "error"});
                 });
         };
@@ -233,6 +238,6 @@ $(function () {
     OCTOPRINT_VIEWMODELS.push({
         construct:    PrintButlerViewModel,
         dependencies: ["settingsViewModel", "loginStateViewModel"],
-        elements:     ["#settings_plugin_printbutler", "#navbar_plugin_printbutler"]
+        elements:     ["#settings_plugin_printbutler", "#navbar_plugin_printbutler", "#sidebar_plugin_printbutler"]
     });
 });
