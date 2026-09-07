@@ -152,3 +152,20 @@ see the PR history for that.
   gets assigned there rather than at construction), so by then reading
   `self.settings.shutdown_enabled()` unconditionally is both safe and
   correctly reactive.
+- **A sidebar checkbox can persist a real plugin setting immediately,
+  without waiting for the Settings dialog's Save button** - bind it two-way
+  to `settings.<key>` like any Settings-dialog field would (it's the exact
+  same shared observable `settingsViewModel` itself owns, so every other
+  place that reads it, e.g. the Settings dialog, updates for free the
+  instant it's clicked), then in a `click` handler call
+  `OctoPrint.settings.save({plugins: {<id>: {<key>: value}}})` with just
+  that one key. OctoPrint's settings save merges a partial patch against
+  the full settings tree, so sibling keys are left untouched - no need to
+  round-trip the whole plugin settings object just to flip one flag.
+- **Only delete local files, never SD-card ones, from a "delete after
+  print" style feature.** `self._file_manager.remove_file()` only handles
+  local storage; removing an SD-card file needs a different call
+  (`self._printer.delete_sd_file()`) with different failure modes (printer
+  must be connected, etc.). Not worth the extra complexity/risk for a
+  cleanup convenience feature - skip and log if the finished print's
+  `origin` isn't `FileDestinations.LOCAL`.

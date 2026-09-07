@@ -92,14 +92,3 @@
     line-height: 1;
     color: #777;
 }
-
-#navbar_plugin_printbutler {
-    cursor: pointer;
-    margin-right: 10px;
-}
-#navbar_plugin_printbutler.printbutler-navbar-armed i.fa-snowflake {
-    color: #5bc0de;
-}
-#navbar_plugin_printbutler.printbutler-navbar-disarmed i.fa-snowflake {
-    color: #999;
-}
