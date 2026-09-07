@@ -75,9 +75,9 @@ $(function () {
         // in later, asynchronously) and a ko.computed evaluates its
         // function immediately to find its dependencies - reading it here
         // would throw and abort building this entire viewmodel, silently
-        // leaving every binding on this plugin's settings/navbar/sidebar
-        // templates unwired. onBeforeBinding is guaranteed to run only
-        // once that data actually exists (see self.settings below).
+        // leaving every binding on this plugin's settings/sidebar templates
+        // unwired. onBeforeBinding is guaranteed to run only once that data
+        // actually exists (see self.settings below).
 
         self.cooldownSecondsText = ko.computed(function () {
             var s = self.cooldownSecondsRemaining();
@@ -155,14 +155,11 @@ $(function () {
                 });
         };
 
-        // Shared by the navbar icon (a plain click, no native checked state)
-        // and the sidebar checkbox (checked: armed already flips it, and
-        // KO's checked binding, natively before this handler runs - so read
-        // that directly there instead of guessing via negation).
+        // The sidebar checkbox's native click + KO's checked binding have
+        // already flipped event.target.checked to the new value by the
+        // time this runs, so read it directly rather than negating armed().
         self.toggleArmed = function (data, event) {
-            var next = (event && event.target && typeof event.target.checked === "boolean")
-                ? event.target.checked
-                : !self.armed();
+            var next = event.target.checked;
             OctoPrint.simpleApiCommand("printbutler", "set_armed", {armed: next})
                 .done(function (data) {
                     self.armed(data.armed === true);
@@ -171,6 +168,30 @@ $(function () {
                     self.armed(!next);
                     new PNotify({title: tr("PrintButler"), text: tr("Request failed."), type: "error"});
                 });
+        };
+
+        // shutdown_enabled/delete_finished_file_enabled are real persisted
+        // settings, not runtime-only flags like armed - self.settings.<key>
+        // is the exact same observable settingsViewModel itself uses, so
+        // the checkbox's two-way `checked` binding already keeps every
+        // other bound copy (e.g. the Settings dialog) in sync for free.
+        // This just needs to persist that already-updated value to the
+        // server without waiting for the Settings dialog's own Save button,
+        // and roll it back everywhere if that fails.
+        self._saveBoolSetting = function (key, next) {
+            var patch = {plugins: {printbutler: {}}};
+            patch.plugins.printbutler[key] = next;
+            OctoPrint.settings.save(patch)
+                .fail(function () {
+                    self.settings[key](!next);
+                    new PNotify({title: tr("PrintButler"), text: tr("Request failed."), type: "error"});
+                });
+        };
+        self.toggleShutdownEnabled = function (data, event) {
+            self._saveBoolSetting("shutdown_enabled", event.target.checked);
+        };
+        self.toggleDeleteFinishedFile = function (data, event) {
+            self._saveBoolSetting("delete_finished_file_enabled", event.target.checked);
         };
 
         self._runTest = function (command, busyObservable, extraData) {
@@ -249,6 +270,6 @@ $(function () {
     OCTOPRINT_VIEWMODELS.push({
         construct:    PrintButlerViewModel,
         dependencies: ["settingsViewModel", "loginStateViewModel"],
-        elements:     ["#settings_plugin_printbutler", "#navbar_plugin_printbutler", "#sidebar_plugin_printbutler"]
+        elements:     ["#settings_plugin_printbutler", "#sidebar_plugin_printbutler"]
     });
 });

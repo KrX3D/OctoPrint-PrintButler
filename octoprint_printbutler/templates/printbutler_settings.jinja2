@@ -17,6 +17,7 @@
         <li><a href="#printbutler_tab_light"  data-toggle="tab">{{ _("Finish Light") }}</a></li>
         <li><a href="#printbutler_tab_shared" data-toggle="tab">{{ _("Shared Light") }}</a></li>
         <li><a href="#printbutler_tab_shutdown" data-toggle="tab">{{ _("Safe Shutdown") }}</a></li>
+        <li><a href="#printbutler_tab_cleanup" data-toggle="tab">{{ _("File Cleanup") }}</a></li>
         <li><a href="#printbutler_tab_status" data-toggle="tab"
                data-bind="click: refreshStatus">{{ _("Status / Log") }}</a></li>
     </ul>
@@ -432,13 +433,39 @@
             <div class="control-group">
                 <div class="controls">
                     <p class="muted">
-                        {{ _("Controlled live by the power button in the top navigation bar - armed by default on every OctoPrint start; click it to disarm for the current session (e.g. to keep the printer on after this print).") }}
+                        {{ _("Controlled live from the PrintButler section in the left sidebar - armed by default on every OctoPrint start; uncheck it there to disarm for the current session (e.g. to keep the printer on after this print).") }}
                         {{ _("Currently:") }}
                         <strong data-bind="visible: armed" style="color:#3c763d;">{{ _("Armed") }}</strong><!--
                         --><strong data-bind="visible: !armed()" style="color:#a94442;">{{ _("Disarmed") }}</strong>
                     </p>
                     <p class="muted" data-bind="visible: cooldownCounting">
                         {{ _("Currently counting down:") }} <strong data-bind="text: cooldownSecondsText"></strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================== File Cleanup ============================== -->
+        <div class="tab-pane" id="printbutler_tab_cleanup">
+            <p class="printbutler-section-heading">{{ _("File Cleanup") }}</p>
+            <p class="muted">
+                {{ _("Deletes the file that just finished printing - but only on OctoPrint's own \"print done\" event, which fires exclusively on a genuine successful completion. A print that's aborted, fails, or is interrupted by a disconnect/reset never reaches that event, so the file is left alone in every one of those cases.") }}
+            </p>
+
+            <div class="control-group">
+                <div class="controls">
+                    <label class="checkbox">
+                        <input type="checkbox" data-bind="checked: settings.delete_finished_file_enabled">
+                        {{ _("Delete the file after it finishes printing successfully") }}
+                    </label>
+                    <span class="help-inline muted">{{ _("SD card files are skipped - only files printed from local storage are deleted.") }}</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="controls">
+                    <p class="muted">
+                        {{ _("Also directly toggleable from the PrintButler section in the left sidebar, without opening Settings.") }}
                     </p>
                 </div>
             </div>

@@ -16,6 +16,7 @@ from collections import deque
 import flask
 import octoprint.plugin
 from octoprint.events import Events
+from octoprint.filemanager.destinations import FileDestinations
 
 MAX_LOG_ENTRIES = 400
 
@@ -132,10 +133,18 @@ class PrintButlerPlugin(
             # Safe Shutdown fires automatically once bed/nozzle stay below
             # threshold for a sustained period after being observed hot (not
             # just already-cold at startup) and the printer isn't printing.
-            # Gated by the navbar arm/disarm toggle too.
+            # Gated by the sidebar arm/disarm toggle too.
             auto_shutdown_bed_threshold=40,
             auto_shutdown_tool_threshold=40,
             auto_shutdown_confirm_seconds=60,
+
+            # Delete the just-printed file once it finishes successfully.
+            # Hooked on Events.PRINT_DONE only, which OctoPrint fires
+            # exclusively on a genuine successful completion - a failed,
+            # cancelled, or disconnected/reset print never reaches this
+            # event at all, so nothing extra is needed to leave those files
+            # alone.
+            delete_finished_file_enabled=False,
         )
 
     def on_settings_save(self, data):
@@ -152,11 +161,6 @@ class PrintButlerPlugin(
                 name="PrintButler",
                 template="printbutler_settings.jinja2",
                 custom_bindings=True,
-            ),
-            dict(
-                type="navbar",
-                custom_bindings=True,
-                template="printbutler_navbar.jinja2",
             ),
             # OctoPrint always places plugin sidebar sections below the
             # built-in Connection/State/Files ones and gives plugins no way
@@ -232,6 +236,7 @@ class PrintButlerPlugin(
             return
         if event == Events.PRINT_DONE:
             self._handle_print_done()
+            self._delete_finished_file(payload)
         elif event == Events.PRINT_STARTED:
             self._handle_print_started()
 
@@ -268,6 +273,39 @@ class PrintButlerPlugin(
         if self._get_bool("finish_light_enabled") and self._get_bool("finish_light_off_on_print_start"):
             self._cancel_timer("_finish_light_off_timer")
             self._set_finish_light(False)
+
+    # -- Delete finished file ------------------------------------------------
+
+    def _delete_finished_file(self, payload):
+        """
+        Only ever called from Events.PRINT_DONE, which OctoPrint fires
+        exclusively on a genuine successful completion - PRINT_FAILED,
+        PRINT_CANCELLED, and a disconnect/reset mid-print are all separate
+        events that never reach here, so there's nothing extra to check for
+        "don't delete on abort/fail/reset".
+        """
+        if not self._get_bool("delete_finished_file_enabled"):
+            return
+
+        payload = payload or {}
+        path = payload.get("path")
+        origin = payload.get("origin") or FileDestinations.LOCAL
+        if not path:
+            self._log("Delete-after-print enabled but the PrintDone event had no file path.", "WARNING")
+            return
+        if origin != FileDestinations.LOCAL:
+            self._log(
+                "Delete-after-print skipped - file is on {} storage, not local.".format(origin),
+                "WARNING",
+            )
+            return
+
+        try:
+            self._file_manager.remove_file(origin, path)
+            self._log("Deleted finished print file: {}".format(path))
+        except Exception as exc:
+            self._log("Failed to delete finished print file {}: {}".format(path, exc), "ERROR")
+            self._log(traceback.format_exc(), "DEBUG")
 
     # -- Finish notify / finish light ---------------------------------------
 
@@ -841,7 +879,7 @@ class PrintButlerPlugin(
 __plugin_name__         = "PrintButler"
 __plugin_identifier__   = "printbutler"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.3.7"
+__plugin_version__      = "0.4.0"
 __plugin_description__  = (
     "Print-finished notifications, light/plug automation, and safe shutdown - "
     "all driven from OctoPrint's own state over MQTT, configurable from the "
