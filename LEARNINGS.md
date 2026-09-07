@@ -131,6 +131,24 @@ see the PR history for that.
   eager evaluation (during construction, `self.settings` still `null`) the
   `&&` short-circuited before `shutdown_enabled()` was ever called, and the
   computed locked onto `false` forever, regardless of the actual setting.
-  Fixed by reading `self.settingsViewModel.settings.plugins.printbutler...`
-  directly instead - that's a real constructor parameter, present
-  unconditionally from the start, so nothing short-circuits.
+- **Don't "fix" that by reading `settingsViewModel.settings.plugins.<id>`
+  directly at construction time either** - that was the first attempt here,
+  and it made things much worse. A `ko.computed` evaluates its function
+  *immediately*, synchronously, during construction, to discover its
+  dependencies - and `settingsViewModel.settings.plugins.<id>` isn't
+  guaranteed populated yet at that point (it's filled in later, from an
+  async request). Reading into it throws, and since the whole viewmodel
+  constructor runs as one synchronous block, that exception aborts building
+  the *entire* viewmodel - every template this plugin has (settings,
+  navbar, sidebar) is left with `data-bind` attributes that never got
+  wired to anything. From the user's side this looked exactly like "all my
+  settings got reset": checkboxes in the settings dialog still render
+  (raw, unbound HTML defaults to unchecked) and *look* interactive, but
+  toggling them does nothing to the real observable, so whatever was saved
+  before keeps getting sent back unchanged on every Save. The actual fix:
+  create the computed inside `onBeforeBinding` instead of in the
+  constructor - OctoPrint guarantees that hook only runs once the settings
+  data genuinely exists (that's the entire reason `self.settings` itself
+  gets assigned there rather than at construction), so by then reading
+  `self.settings.shutdown_enabled()` unconditionally is both safe and
+  correctly reactive.
