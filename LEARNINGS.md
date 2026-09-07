@@ -210,3 +210,24 @@ see the PR history for that.
   closes this off unconditionally: a control that's disabled while a
   request is in flight physically cannot fire a second one, regardless of
   what would otherwise have triggered the repeat.
+- **A periodic status poll racing a user-triggered toggle can silently undo
+  it** - and did: after the busyObservable fix above, the actual remaining
+  bug turned out to be `refreshStatus()`'s 5-second `setInterval` poll,
+  which unconditionally overwrites `armed`/`deleteFinishedFileEnabled` from
+  whatever `/api/plugin/printbutler` last returned. That poll doesn't wait
+  for the previous one to finish and isn't synchronized with anything else,
+  so a poll already in flight *before* a click can have its (now-stale,
+  pre-toggle) response arrive *after* the toggle's own response and stomp
+  the just-applied new value straight back to the old one - intermittent,
+  since it depends on how the two requests happen to race. Symptom: the
+  Settings-dialog checkbox (only ever written by an explicit, confirmed
+  change) showed the correct value, while the sidebar's own observable
+  (also written by every routine poll) kept snapping back. Fixed with a
+  generation counter per toggle-able field (`_armedGeneration`,
+  `_deleteFinishedFileGeneration`), bumped synchronously the moment a
+  toggle actually sends its request; `refreshStatus` captures the current
+  generation *before* sending its own request and only applies that one
+  field from the response if the generation is still unchanged when the
+  response arrives - i.e., no toggle completed in the meantime. Everything
+  else in the same poll response still applies normally; this only guards
+  the specific fields that can also change from outside the poll.
