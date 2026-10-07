@@ -42,16 +42,10 @@ $(function () {
 
         // Belt-and-suspenders: force the checkbox DOM nodes to match the
         // observable directly, bypassing Knockout's own checked binding
-        // entirely for the actual repaint. Confirmed via real request/
-        // response payloads that the underlying armed/enabled value is
-        // always correct after a toggle - the remaining symptom (checkbox
-        // not visibly updating, sometimes only the text next to it
-        // changing, fixed by a full page reload) points at Knockout's
-        // reactive DOM update occasionally not repainting this specific
-        // control, not at the data being wrong. Querying and setting
-        // .checked directly can't have that problem - there's no binding
-        // context or reactivity involved, just a plain DOM write run
-        // every time the observable's value actually changes.
+        // entirely for the actual repaint. Querying and setting .checked
+        // directly can't have any binding-context/reactivity ambiguity -
+        // it's a plain DOM write run every time the observable's value
+        // actually changes, regardless of what caused that change.
         self._syncCheckboxDom = function (fieldName, value) {
             document
                 .querySelectorAll('input[type="checkbox"][data-printbutler-field="' + fieldName + '"]')
@@ -61,6 +55,24 @@ $(function () {
         };
         self.armed.subscribe(function (value) { self._syncCheckboxDom("armed", value); });
         self.deleteFinishedFileEnabled.subscribe(function (value) { self._syncCheckboxDom("delete-finished-file", value); });
+
+        // Programmatic updates (poll, push message, a toggle's own success
+        // response) go through these, NOT straight through self.armed(...)
+        // / self.deleteFinishedFileEnabled(...) - the _xSyncing flag tells
+        // the subscribe()-based send-to-server handlers below "this change
+        // didn't come from the user checking the box, don't re-send it".
+        self._armedSyncing = false;
+        self._setArmedFromServer = function (value) {
+            self._armedSyncing = true;
+            self.armed(value);
+            self._armedSyncing = false;
+        };
+        self._deleteFinishedFileSyncing = false;
+        self._setDeleteFinishedFileFromServer = function (value) {
+            self._deleteFinishedFileSyncing = true;
+            self.deleteFinishedFileEnabled(value);
+            self._deleteFinishedFileSyncing = false;
+        };
 
         self.cooldownCounting          = ko.observable(false);
         self.cooldownSecondsRemaining  = ko.observable(null);
@@ -182,11 +194,11 @@ $(function () {
             if (plugin !== "printbutler" || !data || !data.event) { return; }
             if (data.event === "armed_changed") {
                 self._applyIfNewer("_armedVersion", data.version, function () {
-                    self.armed(data.armed === true);
+                    self._setArmedFromServer(data.armed === true);
                 });
             } else if (data.event === "delete_finished_file_enabled_changed") {
                 self._applyIfNewer("_deleteFinishedFileVersion", data.version, function () {
-                    self.deleteFinishedFileEnabled(data.enabled === true);
+                    self._setDeleteFinishedFileFromServer(data.enabled === true);
                     if (self.settings) { self.settings.delete_finished_file_enabled(data.enabled === true); }
                 });
             }
@@ -204,7 +216,7 @@ $(function () {
                     self.sharedLightDesired(data.shared_light_desired);
                     self.quietHoursActive(data.quiet_hours_active === true);
                     self._applyIfNewer("_armedVersion", data.armed_version, function () {
-                        self.armed(data.auto_shutdown_armed !== false);
+                        self._setArmedFromServer(data.auto_shutdown_armed !== false);
                     });
                     // Deliberately NOT also writing this into
                     // self.settings.delete_finished_file_enabled here: this
@@ -214,11 +226,12 @@ $(function () {
                     // on every tick - which would keep stomping a Settings-
                     // dialog edit the user has made but not saved yet. Only
                     // sync that shared observable on an explicit, confirmed
-                    // change (toggleDeleteFinishedFile's success handler and
-                    // the delete_finished_file_enabled_changed plugin
-                    // message above) - never from a routine status refresh.
+                    // change (the armed/delete-file subscribe handlers'
+                    // success callback and the delete_finished_file_enabled_
+                    // changed plugin message above) - never from a routine
+                    // status refresh.
                     self._applyIfNewer("_deleteFinishedFileVersion", data.delete_finished_file_version, function () {
-                        self.deleteFinishedFileEnabled(data.delete_finished_file_enabled === true);
+                        self._setDeleteFinishedFileFromServer(data.delete_finished_file_enabled === true);
                     });
                     self.cooldownCounting(data.cooldown_counting === true);
                     self.cooldownSecondsRemaining(
@@ -234,30 +247,36 @@ $(function () {
                 });
         };
 
-        // Guarded by armedBusy - and the template also disables the
-        // checkbox itself while busy (`enable: !armedBusy()`), so a click
-        // can't even register until the previous request finishes. The
-        // server log showed a burst of several identical requests logged
-        // for what should have been a single click, piling up pending
-        // requests and making the whole page feel unresponsive while they
-        // were all in flight - this closes that off regardless of what was
-        // actually causing the repeats.
-        self.toggleArmed = function (data, event) {
-            if (self.armedBusy()) { return; }
-            var next = event.target.checked;
+        // OctoPrint core's own checkboxes (e.g. "Verbindungseinstellungen
+        // speichern" on the Connection panel) bind `checked` alone - never
+        // `checked` plus a `click` handler on the same element. This plugin
+        // combined the two for a long time, and every "checkbox doesn't
+        // visibly update" report traced back to it (see LEARNINGS.md) -
+        // switched to the same checked-only pattern core uses, with the
+        // actual API call triggered by subscribing to the observable
+        // instead. _armedSyncing (set by _setArmedFromServer) distinguishes
+        // "the user just checked/unchecked this box" from "we just set this
+        // to reflect the server's own state" - without it, every poll/push
+        // update would loop right back into sending another API request.
+        // Guarded by armedBusy too, and the template disables the checkbox
+        // itself while busy (`enable: !armedBusy()`) so a disabled checkbox
+        // can't fire a change at all - belt and suspenders against the
+        // request pile-up seen before this was added.
+        self.armed.subscribe(function (value) {
+            if (self._armedSyncing || self.armedBusy()) { return; }
             self.armedBusy(true);
-            OctoPrint.simpleApiCommand("printbutler", "set_armed", {armed: next})
+            OctoPrint.simpleApiCommand("printbutler", "set_armed", {armed: value})
                 .done(function (data) {
                     self._applyIfNewer("_armedVersion", data.version, function () {
-                        self.armed(data.armed === true);
+                        self._setArmedFromServer(data.armed === true);
                     });
                 })
                 .fail(function () {
-                    self.armed(!next);
+                    self._setArmedFromServer(!value);
                     new PNotify({title: tr("PrintButler"), text: tr("Request failed."), type: "error"});
                 })
                 .always(function () { self.armedBusy(false); });
-        };
+        });
 
         // delete_finished_file_enabled is a real persisted setting (unlike
         // armed), but toggled from the sidebar the same dedicated-observable
@@ -269,24 +288,23 @@ $(function () {
         // made it unreliable in practice (see LEARNINGS.md). A plugin-owned
         // observable, explicitly persisted server-side, is the same
         // approach that already works correctly for armed.
-        self.toggleDeleteFinishedFile = function (data, event) {
-            if (self.deleteFinishedFileBusy()) { return; }
-            var next = event.target.checked;
+        self.deleteFinishedFileEnabled.subscribe(function (value) {
+            if (self._deleteFinishedFileSyncing || self.deleteFinishedFileBusy()) { return; }
             self.deleteFinishedFileBusy(true);
-            OctoPrint.simpleApiCommand("printbutler", "set_delete_finished_file_enabled", {enabled: next})
+            OctoPrint.simpleApiCommand("printbutler", "set_delete_finished_file_enabled", {enabled: value})
                 .done(function (data) {
                     self._applyIfNewer("_deleteFinishedFileVersion", data.version, function () {
                         var enabled = data.delete_finished_file_enabled === true;
-                        self.deleteFinishedFileEnabled(enabled);
+                        self._setDeleteFinishedFileFromServer(enabled);
                         if (self.settings) { self.settings.delete_finished_file_enabled(enabled); }
                     });
                 })
                 .fail(function () {
-                    self.deleteFinishedFileEnabled(!next);
+                    self._setDeleteFinishedFileFromServer(!value);
                     new PNotify({title: tr("PrintButler"), text: tr("Request failed."), type: "error"});
                 })
                 .always(function () { self.deleteFinishedFileBusy(false); });
-        };
+        });
 
         self._runTest = function (command, busyObservable, extraData) {
             if (busyObservable()) { return; }

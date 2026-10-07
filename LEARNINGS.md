@@ -301,3 +301,28 @@ see the PR history for that.
   competing for the browser's small per-origin connection pool can delay
   an unrelated toggle click's own request sitting right behind it in the
   queue.
+- **The actual root cause of this entire saga, finally found by diffing
+  against OctoPrint core's own markup: never combine `checked` and
+  `click` on the same checkbox `<input>`.** Core's own checkboxes (e.g.
+  the Connection panel's "save connection settings" toggle) bind `checked`
+  alone - there is no example anywhere in OctoPrint itself of a checkbox
+  also carrying a `click` handler. This plugin did that from the very
+  first version of the arm/disarm toggle, and every single "checkbox
+  doesn't visibly update" variant reported across many rounds (stuck
+  until F5, selects but won't deselect, only the text label updates) was
+  ultimately this interaction, however it actually manifests at the
+  browser/Knockout internals level (never fully traced further than
+  that - didn't need to be, once the fix was obvious). The things tried
+  before this that were still worth keeping even though they weren't the
+  root cause: the version-tagged state (still needed - a real, separate
+  stale-data race) and the MQTT-probe caching above (still a real,
+  separate latency source) - neither was wrong, they just weren't *this*
+  bug. The actual fix: bind `checked` alone, and move the "send this to
+  the server" logic into a `.subscribe()` on the observable instead of a
+  `click` handler. That introduces its own new problem - a `.subscribe()`
+  fires for *any* change to the observable, including the ones *we*
+  make to reflect a poll/push/response, which would otherwise loop
+  straight back into sending another API call - solved with a plain
+  boolean flag (`_armedSyncing` / `_deleteFinishedFileSyncing`) set
+  around every programmatic write, that the subscribe handler checks
+  first and bails out on.

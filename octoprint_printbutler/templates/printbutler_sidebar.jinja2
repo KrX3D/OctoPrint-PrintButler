@@ -4,7 +4,7 @@
 <div class="control-group" style="margin-bottom:6px;">
     <label class="checkbox" style="margin:0; cursor:pointer;">
         <input type="checkbox" data-printbutler-field="armed"
-               data-bind="checked: armed, enable: !armedBusy(), click: toggleArmed">
+               data-bind="checked: armed, enable: !armedBusy()">
         {{ _("Auto-shutdown when cool") }}
     </label>
 </div>
@@ -24,7 +24,7 @@
 <div class="control-group" style="margin-bottom:0;">
     <label class="checkbox" style="margin:0; cursor:pointer;">
         <input type="checkbox" data-printbutler-field="delete-finished-file"
-               data-bind="checked: deleteFinishedFileEnabled, enable: !deleteFinishedFileBusy(), click: toggleDeleteFinishedFile">
+               data-bind="checked: deleteFinishedFileEnabled, enable: !deleteFinishedFileBusy()">
         {{ _("Delete file after successful print") }}
     </label>
 </div>
