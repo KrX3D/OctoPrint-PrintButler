@@ -29,6 +29,9 @@ msgstr "Gemeinsames Licht"
 msgid "Safe Shutdown"
 msgstr "Sicheres Herunterfahren"
 
+msgid "File Cleanup"
+msgstr "Dateien aufräumen"
+
 msgid "Status / Log"
 msgstr "Status / Log"
 
@@ -170,17 +173,41 @@ msgstr "Wartezeit vor dem Herunterfahren (Sekunden)"
 msgid "Wait this long after publishing the trigger before running the shutdown command, so the message has time to actually leave the host."
 msgstr "Wie lange nach dem Senden des Trigger-Topics gewartet wird, bevor der Shutdown-Befehl ausgeführt wird, damit die Nachricht den Host noch verlassen kann."
 
-msgid "Controlled live by the power button in the top navigation bar - armed by default on every OctoPrint start; click it to disarm for the current session (e.g. to keep the printer on after this print)."
-msgstr "Wird live über den Power-Button in der oberen Navigationsleiste gesteuert - bei jedem OctoPrint-Start standardmäßig aktiv (armed); anklicken, um es für die aktuelle Sitzung zu deaktivieren (z. B. um den Drucker nach diesem Druck an zu lassen)."
+msgid "Auto-shutdown-when-cool is currently armed"
+msgstr "Auto-Shutdown nach Abkühlen ist derzeit aktiv (armed)"
 
-msgid "Currently:"
-msgstr "Aktuell:"
+msgid "Resets to armed on every OctoPrint start - uncheck to disarm for the current session (e.g. to keep the printer on after this print). Also toggleable from the PrintButler section in the left sidebar."
+msgstr "Wird bei jedem OctoPrint-Start wieder aktiv (armed) gesetzt - abwählen, um es für die aktuelle Sitzung zu deaktivieren (z. B. um den Drucker nach diesem Druck an zu lassen). Auch über den PrintButler-Bereich in der linken Seitenleiste umschaltbar."
 
 msgid "Armed"
 msgstr "Aktiv"
 
 msgid "Disarmed"
 msgstr "Deaktiviert"
+
+msgid "Deletes the file that just finished printing - but only on OctoPrint's own \"print done\" event, which fires exclusively on a genuine successful completion. A print that's aborted, fails, or is interrupted by a disconnect/reset never reaches that event, so the file is left alone in every one of those cases."
+msgstr "Löscht die Datei, die gerade fertig gedruckt wurde - aber nur bei OctoPrints eigenem \"Druck fertig\"-Ereignis, das ausschließlich bei einem tatsächlich erfolgreichen Abschluss ausgelöst wird. Ein abgebrochener, fehlgeschlagener oder durch eine Verbindungstrennung/einen Reset unterbrochener Druck erreicht dieses Ereignis nie, sodass die Datei in all diesen Fällen unangetastet bleibt."
+
+msgid "Delete the file after it finishes printing successfully"
+msgstr "Datei löschen, nachdem der Druck erfolgreich beendet wurde"
+
+msgid "SD card files are skipped - only files printed from local storage are deleted."
+msgstr "SD-Karten-Dateien werden übersprungen - nur Dateien, die vom lokalen Speicher gedruckt wurden, werden gelöscht."
+
+msgid "Also directly toggleable from the PrintButler section in the left sidebar, without opening Settings."
+msgstr "Auch direkt über den PrintButler-Bereich in der linken Seitenleiste umschaltbar, ohne die Einstellungen zu öffnen."
+
+msgid "Auto-shutdown when cool"
+msgstr "Auto-Shutdown nach Abkühlen"
+
+msgid "Cooling down - shutdown in"
+msgstr "Kühlt ab - Shutdown in"
+
+msgid "Enable Safe Shutdown in PrintButler's settings to arm/disarm it here."
+msgstr "Aktiviere \"Sicheres Herunterfahren\" in den PrintButler-Einstellungen, um es hier zu aktivieren/deaktivieren."
+
+msgid "Delete file after successful print"
+msgstr "Datei nach erfolgreichem Druck löschen"
 
 msgid "Live Status"
 msgstr "Live-Status"
@@ -217,6 +244,12 @@ msgstr "MQTT nicht verbunden"
 
 msgid "Unknown"
 msgstr "Unbekannt"
+
+msgid "Active"
+msgstr "Aktiv"
+
+msgid "Shutting down"
+msgstr "Fährt herunter"
 
 msgid "On"
 msgstr "An"

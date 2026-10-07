@@ -56,8 +56,17 @@ class PrintButlerPlugin(
         # happens to already be idle/cold would false-trigger a shutdown.
         self._cooldown_seen_hot = False
         # Auto-shutdown-when-cool arm/disarm - live, in-memory, resets to
-        # armed on every OctoPrint start (see the navbar toggle).
+        # armed on every OctoPrint start (see the sidebar/settings toggle).
         self._auto_shutdown_armed = True
+        # Monotonic counters bumped on every change to armed/
+        # delete_finished_file_enabled, from *any* path (API command,
+        # auto-disarm-on-trigger, Settings dialog save). The client compares
+        # these against what it already applied before accepting a new
+        # value, since a poll response or a push message can otherwise
+        # arrive out of order relative to a more recent change and silently
+        # revert it - see LEARNINGS.md.
+        self._armed_version = 0
+        self._delete_finished_file_version = 0
 
     # -- SettingsPlugin ----------------------------------------------------
 
@@ -149,6 +158,12 @@ class PrintButlerPlugin(
 
     def on_settings_save(self, data):
         octoprint.plugin.SettingsPlugin.on_settings_save(self, data)
+        if "delete_finished_file_enabled" in data:
+            # A Settings-dialog save bypasses set_delete_finished_file_enabled
+            # entirely, so it has to bump this version itself too - otherwise
+            # the sidebar/poll would have no way to tell this was a newer
+            # change than whatever it already applied.
+            self._delete_finished_file_version += 1
         self._plugin_log("Settings saved.")
         self._rewire_mqtt()
 
@@ -684,9 +699,10 @@ class PrintButlerPlugin(
                         self._cooldown_since = None
                         self._cooldown_seen_hot = False
                         self._auto_shutdown_armed = False
+                        self._armed_version += 1
                         self._plugin_manager.send_plugin_message(
                             self._identifier,
-                            {"event": "armed_changed", "armed": False},
+                            {"event": "armed_changed", "armed": False, "version": self._armed_version},
                         )
                         threading.Thread(
                             target=self._do_safe_shutdown, name="printbutler-autoshutdown",
@@ -722,6 +738,7 @@ class PrintButlerPlugin(
 
         elif command == "set_armed":
             self._auto_shutdown_armed = bool(data.get("armed"))
+            self._armed_version += 1
             self._log(
                 "Auto-shutdown-when-cool {}.".format(
                     "armed" if self._auto_shutdown_armed else "disarmed"
@@ -732,9 +749,11 @@ class PrintButlerPlugin(
                 self._cooldown_seen_hot = False
             self._plugin_manager.send_plugin_message(
                 self._identifier,
-                {"event": "armed_changed", "armed": self._auto_shutdown_armed},
+                {"event": "armed_changed", "armed": self._auto_shutdown_armed, "version": self._armed_version},
             )
-            return flask.jsonify({"success": True, "armed": self._auto_shutdown_armed})
+            return flask.jsonify({
+                "success": True, "armed": self._auto_shutdown_armed, "version": self._armed_version
+            })
 
         elif command == "set_delete_finished_file_enabled":
             # Unlike set_armed above, this flips a real persisted setting
@@ -751,16 +770,24 @@ class PrintButlerPlugin(
             # default) stored normally. force=True stores the explicit
             # value unconditionally either way. armed never needed this -
             # it's a plain instance attribute, not a persisted setting.
-            self._log("set_delete_finished_file_enabled raw payload: {}".format(data), "DEBUG")
             enabled = bool(data.get("enabled"))
             self._settings.set_boolean(["delete_finished_file_enabled"], enabled, force=True)
             self._settings.save()
+            self._delete_finished_file_version += 1
             self._log("Delete-file-after-print {}.".format("enabled" if enabled else "disabled"))
             self._plugin_manager.send_plugin_message(
                 self._identifier,
-                {"event": "delete_finished_file_enabled_changed", "enabled": enabled},
+                {
+                    "event": "delete_finished_file_enabled_changed",
+                    "enabled": enabled,
+                    "version": self._delete_finished_file_version,
+                },
             )
-            return flask.jsonify({"success": True, "delete_finished_file_enabled": enabled})
+            return flask.jsonify({
+                "success": True,
+                "delete_finished_file_enabled": enabled,
+                "version": self._delete_finished_file_version,
+            })
 
         elif command == "test_finish_notify":
             if not self._publish_finish_notify(overrides=data):
@@ -834,9 +861,11 @@ class PrintButlerPlugin(
             quiet_hours_active=self._in_quiet_hours(),
             shutdown_running=self._shutdown_running,
             auto_shutdown_armed=self._auto_shutdown_armed,
+            armed_version=self._armed_version,
             cooldown_counting=self._cooldown_since is not None,
             cooldown_seconds_remaining=cooldown_seconds_remaining,
             delete_finished_file_enabled=self._get_bool("delete_finished_file_enabled"),
+            delete_finished_file_version=self._delete_finished_file_version,
             logs=list(self._log_entries),
         ))
 
@@ -907,7 +936,7 @@ class PrintButlerPlugin(
 __plugin_name__         = "PrintButler"
 __plugin_identifier__   = "printbutler"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.4.4"
+__plugin_version__      = "0.5.0"
 __plugin_description__  = (
     "Print-finished notifications, light/plug automation, and safe shutdown - "
     "all driven from OctoPrint's own state over MQTT, configurable from the "

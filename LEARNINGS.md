@@ -231,3 +231,28 @@ see the PR history for that.
   response arrives - i.e., no toggle completed in the meantime. Everything
   else in the same poll response still applies normally; this only guards
   the specific fields that can also change from outside the poll.
+- **That generation-counter fix above only covered the poll - it left the
+  exact same race open on the `send_plugin_message` push channel**, and the
+  checkbox kept "not updating until F5" because of it. The push and any
+  REST response are two *independent* channels with no guaranteed delivery
+  order relative to each other: two rapid toggles can easily have the
+  *earlier* one's push arrive *after* the *later* one's REST response,
+  reverting the checkbox right back. A client-local "generation" bumped
+  only by this tab's own toggles can't catch that, since the push didn't
+  come from this tab's request at all. The real fix needed a version that
+  the *server* attaches to the value itself, bumped on every change from
+  *any* path (API command, the auto-disarm-on-trigger path in
+  `_cooldown_loop`, even a plain Settings-dialog save for
+  `delete_finished_file_enabled`) and included in the poll response, the
+  push message, and the toggle's own REST response alike. The client then
+  only applies an incoming value if its version is `>=` the last version it
+  already applied for that field (a simple per-field "last write wins by
+  version" rule, not by arrival time) - correct regardless of which of the
+  three channels a given update arrives through, or in what order. Two
+  more subtleties that mattered: (1) the version has to be stamped at the
+  moment the *server* actually changes the value, not inferred client-side,
+  since the client has no visibility into pushes or saves that didn't
+  originate from its own click; (2) keep the version bump out of anything
+  that fires on every unrelated poll (would make `>=` always-true and
+  defeat the whole guard) - only bump it where the value *actually
+  changes*.
