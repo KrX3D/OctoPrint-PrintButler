@@ -33,6 +33,8 @@ class PrintButlerPlugin(
     def __init__(self):
         self._log_entries = deque(maxlen=MAX_LOG_ENTRIES)
         self._mqtt_helpers = None
+        self._mqtt_connected_cache = None
+        self._mqtt_connected_cache_at = 0.0
 
         # This printer's own presence: OctoPrint runs on the same host the
         # smart plug powers, so "is this printer on" is trivially "is this
@@ -477,16 +479,35 @@ class PrintButlerPlugin(
         if the broker connection is down, so a throwaway non-retained publish
         doubles as a live connectivity probe without touching the other
         plugin's private state.
+
+        Cached for a few seconds: this runs on every on_api_get() call, which
+        the UI hits on every 5s status poll *and* once immediately on every
+        page load - a publish() that takes any noticeable time (broker
+        latency, a busy paho-mqtt loop thread, etc.) was sitting directly in
+        front of the very value (armed/delete_finished_file_enabled) a
+        checkbox needed to render its correct state, making that feel
+        "laggy" even right after a fresh page load. The actual connectivity
+        rarely changes second to second, so re-probing on literally every
+        single status fetch was unnecessary cost on the hot path.
         """
+        now = time.time()
+        if self._mqtt_connected_cache is not None and (now - self._mqtt_connected_cache_at) < 10:
+            return self._mqtt_connected_cache
+
         if not self._mqtt_helpers or "mqtt_publish" not in self._mqtt_helpers:
-            return False
-        publish = self._mqtt_helpers["mqtt_publish"]
-        try:
-            return bool(publish(
-                "printbutler/ping", "1", retained=False, qos=0, allow_queueing=False
-            ))
-        except Exception:
-            return False
+            result = False
+        else:
+            publish = self._mqtt_helpers["mqtt_publish"]
+            try:
+                result = bool(publish(
+                    "printbutler/ping", "1", retained=False, qos=0, allow_queueing=False
+                ))
+            except Exception:
+                result = False
+
+        self._mqtt_connected_cache = result
+        self._mqtt_connected_cache_at = now
+        return result
 
     @staticmethod
     def _payload_is_on(raw_payload, match_str, json_key=""):
@@ -936,7 +957,7 @@ class PrintButlerPlugin(
 __plugin_name__         = "PrintButler"
 __plugin_identifier__   = "printbutler"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.5.1"
+__plugin_version__      = "0.5.3"
 __plugin_description__  = (
     "Print-finished notifications, light/plug automation, and safe shutdown - "
     "all driven from OctoPrint's own state over MQTT, configurable from the "

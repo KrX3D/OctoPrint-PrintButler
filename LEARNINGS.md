@@ -279,3 +279,50 @@ see the PR history for that.
   appearance itself (`accent-color`, `color-scheme: light`, a `:checked`
   outline) in case a dark/custom theme was also making checked vs.
   unchecked hard to tell apart visually even when the DOM was right.
+- **"Lag when toggling, and still ~1s even right after a fresh F5"
+  pointed away from a repaint bug entirely and toward real latency in how
+  fast the checkbox's correct value becomes available in the first
+  place.** `on_api_get()` - hit by the 5s status poll *and* once
+  immediately on every page load - called `_check_mqtt_connected()` on
+  every single invocation, which does a real `mqtt_publish()` round trip
+  to probe broker connectivity. If that publish takes any noticeable time
+  (broker latency, a busy paho-mqtt loop thread), it sits directly in
+  front of the very `armed`/`delete_finished_file_enabled` values a
+  checkbox needs to render correctly - on a fresh page load in particular,
+  nothing else is populating those fields yet, so this one call's latency
+  *is* the delay before the checkbox can show anything but its JS
+  default. Connectivity status rarely flips second to second, so there
+  was no need to re-probe on literally every status fetch - cached the
+  result for a few seconds (`_mqtt_connected_cache` /
+  `_mqtt_connected_cache_at`) so only an occasional poll pays for the real
+  probe and the rest return instantly. Also plausibly explains the
+  "stuck until F5" reports from earlier rounds in a way that doesn't
+  require Knockout to be broken at all: a slow, MQTT-probing poll request
+  competing for the browser's small per-origin connection pool can delay
+  an unrelated toggle click's own request sitting right behind it in the
+  queue.
+- **The actual root cause of this entire saga, finally found by diffing
+  against OctoPrint core's own markup: never combine `checked` and
+  `click` on the same checkbox `<input>`.** Core's own checkboxes (e.g.
+  the Connection panel's "save connection settings" toggle) bind `checked`
+  alone - there is no example anywhere in OctoPrint itself of a checkbox
+  also carrying a `click` handler. This plugin did that from the very
+  first version of the arm/disarm toggle, and every single "checkbox
+  doesn't visibly update" variant reported across many rounds (stuck
+  until F5, selects but won't deselect, only the text label updates) was
+  ultimately this interaction, however it actually manifests at the
+  browser/Knockout internals level (never fully traced further than
+  that - didn't need to be, once the fix was obvious). The things tried
+  before this that were still worth keeping even though they weren't the
+  root cause: the version-tagged state (still needed - a real, separate
+  stale-data race) and the MQTT-probe caching above (still a real,
+  separate latency source) - neither was wrong, they just weren't *this*
+  bug. The actual fix: bind `checked` alone, and move the "send this to
+  the server" logic into a `.subscribe()` on the observable instead of a
+  `click` handler. That introduces its own new problem - a `.subscribe()`
+  fires for *any* change to the observable, including the ones *we*
+  make to reflect a poll/push/response, which would otherwise loop
+  straight back into sending another API call - solved with a plain
+  boolean flag (`_armedSyncing` / `_deleteFinishedFileSyncing`) set
+  around every programmatic write, that the subscribe handler checks
+  first and bails out on.

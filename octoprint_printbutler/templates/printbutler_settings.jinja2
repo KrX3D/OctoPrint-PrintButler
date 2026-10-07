@@ -434,7 +434,7 @@
                 <div class="controls">
                     <label class="checkbox">
                         <input type="checkbox" data-printbutler-field="armed"
-                               data-bind="checked: armed, enable: !armedBusy(), click: toggleArmed">
+                               data-bind="checked: armed, enable: !armedBusy()">
                         {{ _("Auto-shutdown-when-cool is currently armed") }}
                     </label>
                     <span class="help-inline muted">{{ _("Resets to armed on every OctoPrint start - uncheck to disarm for the current session (e.g. to keep the printer on after this print). Also toggleable from the PrintButler section in the left sidebar.") }}</span>
