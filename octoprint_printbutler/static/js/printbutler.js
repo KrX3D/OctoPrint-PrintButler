@@ -39,6 +39,29 @@ $(function () {
         // is always accepted. See _applyIfNewer / LEARNINGS.md.
         self._armedVersion              = -1;
         self._deleteFinishedFileVersion = -1;
+
+        // Belt-and-suspenders: force the checkbox DOM nodes to match the
+        // observable directly, bypassing Knockout's own checked binding
+        // entirely for the actual repaint. Confirmed via real request/
+        // response payloads that the underlying armed/enabled value is
+        // always correct after a toggle - the remaining symptom (checkbox
+        // not visibly updating, sometimes only the text next to it
+        // changing, fixed by a full page reload) points at Knockout's
+        // reactive DOM update occasionally not repainting this specific
+        // control, not at the data being wrong. Querying and setting
+        // .checked directly can't have that problem - there's no binding
+        // context or reactivity involved, just a plain DOM write run
+        // every time the observable's value actually changes.
+        self._syncCheckboxDom = function (fieldName, value) {
+            document
+                .querySelectorAll('input[type="checkbox"][data-printbutler-field="' + fieldName + '"]')
+                .forEach(function (el) {
+                    if (el.checked !== value) { el.checked = value; }
+                });
+        };
+        self.armed.subscribe(function (value) { self._syncCheckboxDom("armed", value); });
+        self.deleteFinishedFileEnabled.subscribe(function (value) { self._syncCheckboxDom("delete-finished-file", value); });
+
         self.cooldownCounting          = ko.observable(false);
         self.cooldownSecondsRemaining  = ko.observable(null);
         self.logs                = ko.observableArray([]);
