@@ -31,10 +31,14 @@ $(function () {
         self.armedBusy             = ko.observable(false);
         self.deleteFinishedFileEnabled = ko.observable(false);
         self.deleteFinishedFileBusy    = ko.observable(false);
-        // Bumped by toggleArmed/toggleDeleteFinishedFile every time either
-        // one actually sends a request - see refreshStatus for why.
-        self._armedGeneration              = 0;
-        self._deleteFinishedFileGeneration = 0;
+        // Last version number actually applied for each field - the server
+        // bumps its own counter on every change, from any path (this tab's
+        // toggle, another tab's toggle, the Settings dialog, the auto-
+        // disarm-on-trigger path), and tags every poll response and push
+        // message with it. -1 so the very first update (server version 0)
+        // is always accepted. See _applyIfNewer / LEARNINGS.md.
+        self._armedVersion              = -1;
+        self._deleteFinishedFileVersion = -1;
         self.cooldownCounting          = ko.observable(false);
         self.cooldownSecondsRemaining  = ko.observable(null);
         self.logs                = ko.observableArray([]);
@@ -97,6 +101,21 @@ $(function () {
                 : tr("PrintButler: auto-shutdown-when-cool is DISARMED (click to arm)");
         });
 
+        // Applies applyFn() only if incomingVersion is as new or newer than
+        // what's already been applied for versionKey (e.g. "_armedVersion"),
+        // updating that tracked version first. Used everywhere armed/
+        // deleteFinishedFileEnabled can be updated from the server (poll,
+        // push message, or a toggle's own success response) so a response
+        // that happens to arrive out of order can never revert a value a
+        // more recent change already applied. A missing/non-numeric version
+        // (shouldn't happen, but be defensive) always applies.
+        self._applyIfNewer = function (versionKey, incomingVersion, applyFn) {
+            if (typeof incomingVersion !== "number" || incomingVersion >= self[versionKey]) {
+                if (typeof incomingVersion === "number") { self[versionKey] = incomingVersion; }
+                applyFn();
+            }
+        };
+
         // -- Lifecycle -------------------------------------------------
 
         self.onBeforeBinding = function () {
@@ -129,31 +148,30 @@ $(function () {
             }
         };
 
+        // This push is a *separate* channel from any REST request/response
+        // (including a toggle's own .done() below) - it has no guaranteed
+        // delivery order relative to them. Two rapid toggles can easily have
+        // the earlier one's push arrive after the later one's REST response,
+        // which would silently revert the checkbox back to the older value
+        // without the version guard (this was the actual remaining cause of
+        // "doesn't update until F5" - see LEARNINGS.md).
         self.onDataUpdaterPluginMessage = function (plugin, data) {
             if (plugin !== "printbutler" || !data || !data.event) { return; }
             if (data.event === "armed_changed") {
-                self.armed(data.armed === true);
+                self._applyIfNewer("_armedVersion", data.version, function () {
+                    self.armed(data.armed === true);
+                });
             } else if (data.event === "delete_finished_file_enabled_changed") {
-                self.deleteFinishedFileEnabled(data.enabled === true);
-                if (self.settings) { self.settings.delete_finished_file_enabled(data.enabled === true); }
+                self._applyIfNewer("_deleteFinishedFileVersion", data.version, function () {
+                    self.deleteFinishedFileEnabled(data.enabled === true);
+                    if (self.settings) { self.settings.delete_finished_file_enabled(data.enabled === true); }
+                });
             }
         };
 
         // -- API -------------------------------------------------------
 
         self.refreshStatus = function () {
-            // Captured *before* sending the request: if a toggle completes
-            // between now and when this response arrives, the generation
-            // will have moved on, and this response's value for that one
-            // field is a stale, pre-toggle snapshot - a slow/overlapping
-            // poll (this runs on a fixed 5s timer regardless of anything
-            // else in flight) could otherwise arrive *after* a toggle's own
-            // response and silently stomp the just-applied new value back
-            // to the old one. Everything else in this response is still
-            // applied normally - only armed/deleteFinishedFileEnabled are
-            // also independently toggle-able from outside this poll.
-            var armedGenAtRequest             = self._armedGeneration;
-            var deleteFileGenAtRequest        = self._deleteFinishedFileGeneration;
             OctoPrint.get("api/plugin/printbutler")
                 .done(function (data) {
                     self.pluginVersion(data.plugin_version || "?");
@@ -162,22 +180,23 @@ $(function () {
                     self.thisPrinterActive(data.this_printer_active !== false);
                     self.sharedLightDesired(data.shared_light_desired);
                     self.quietHoursActive(data.quiet_hours_active === true);
-                    if (armedGenAtRequest === self._armedGeneration) {
+                    self._applyIfNewer("_armedVersion", data.armed_version, function () {
                         self.armed(data.auto_shutdown_armed !== false);
-                    }
+                    });
                     // Deliberately NOT also writing this into
                     // self.settings.delete_finished_file_enabled here: this
                     // poll runs every 5s regardless of what else is
-                    // happening, and stomping that shared, Settings-dialog-
-                    // bound observable on every tick could revert an edit
-                    // the user just made in the Settings dialog but hasn't
-                    // saved yet. Only sync it on an explicit, confirmed
+                    // happening, and even with the version guard above, "no
+                    // newer version yet" still re-applies the *same* value
+                    // on every tick - which would keep stomping a Settings-
+                    // dialog edit the user has made but not saved yet. Only
+                    // sync that shared observable on an explicit, confirmed
                     // change (toggleDeleteFinishedFile's success handler and
                     // the delete_finished_file_enabled_changed plugin
-                    // message below) - never from a routine status refresh.
-                    if (deleteFileGenAtRequest === self._deleteFinishedFileGeneration) {
+                    // message above) - never from a routine status refresh.
+                    self._applyIfNewer("_deleteFinishedFileVersion", data.delete_finished_file_version, function () {
                         self.deleteFinishedFileEnabled(data.delete_finished_file_enabled === true);
-                    }
+                    });
                     self.cooldownCounting(data.cooldown_counting === true);
                     self.cooldownSecondsRemaining(
                         typeof data.cooldown_seconds_remaining === "number"
@@ -204,10 +223,11 @@ $(function () {
             if (self.armedBusy()) { return; }
             var next = event.target.checked;
             self.armedBusy(true);
-            self._armedGeneration++;
             OctoPrint.simpleApiCommand("printbutler", "set_armed", {armed: next})
                 .done(function (data) {
-                    self.armed(data.armed === true);
+                    self._applyIfNewer("_armedVersion", data.version, function () {
+                        self.armed(data.armed === true);
+                    });
                 })
                 .fail(function () {
                     self.armed(!next);
@@ -230,12 +250,13 @@ $(function () {
             if (self.deleteFinishedFileBusy()) { return; }
             var next = event.target.checked;
             self.deleteFinishedFileBusy(true);
-            self._deleteFinishedFileGeneration++;
             OctoPrint.simpleApiCommand("printbutler", "set_delete_finished_file_enabled", {enabled: next})
                 .done(function (data) {
-                    var enabled = data.delete_finished_file_enabled === true;
-                    self.deleteFinishedFileEnabled(enabled);
-                    if (self.settings) { self.settings.delete_finished_file_enabled(enabled); }
+                    self._applyIfNewer("_deleteFinishedFileVersion", data.version, function () {
+                        var enabled = data.delete_finished_file_enabled === true;
+                        self.deleteFinishedFileEnabled(enabled);
+                        if (self.settings) { self.settings.delete_finished_file_enabled(enabled); }
+                    });
                 })
                 .fail(function () {
                     self.deleteFinishedFileEnabled(!next);

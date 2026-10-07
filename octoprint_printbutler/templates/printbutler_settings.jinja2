@@ -432,12 +432,11 @@
 
             <div class="control-group">
                 <div class="controls">
-                    <p class="muted">
-                        {{ _("Controlled live from the PrintButler section in the left sidebar - armed by default on every OctoPrint start; uncheck it there to disarm for the current session (e.g. to keep the printer on after this print).") }}
-                        {{ _("Currently:") }}
-                        <strong data-bind="visible: armed" style="color:#3c763d;">{{ _("Armed") }}</strong><!--
-                        --><strong data-bind="visible: !armed()" style="color:#a94442;">{{ _("Disarmed") }}</strong>
-                    </p>
+                    <label class="checkbox">
+                        <input type="checkbox" data-bind="checked: armed, enable: !armedBusy(), click: toggleArmed">
+                        {{ _("Auto-shutdown-when-cool is currently armed") }}
+                    </label>
+                    <span class="help-inline muted">{{ _("Resets to armed on every OctoPrint start - uncheck to disarm for the current session (e.g. to keep the printer on after this print). Also toggleable from the PrintButler section in the left sidebar.") }}</span>
                     <p class="muted" data-bind="visible: cooldownCounting">
                         {{ _("Currently counting down:") }} <strong data-bind="text: cooldownSecondsText"></strong>
                     </p>

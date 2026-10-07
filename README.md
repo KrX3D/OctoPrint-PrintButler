@@ -23,8 +23,8 @@ Each PrintButler instance controls **one printer** (the OctoPrint instance it's 
 - **Finish Indicator Light** - a per-printer light/relay switched on when that printer finishes
 - **Shared Work Light** - a light/relay shared across printers, kept on while this printer (i.e. this OctoPrint instance is running) or any configured peer is powered, with optional self-heal if something else switches it off
 - **Safe Shutdown** - watches bed/nozzle temperature and, once cooled down after having been hot, publishes an MQTT trigger topic and runs a shutdown command on the host - actually cutting mains power is left to an external automation (e.g. Home Assistant) watching that topic, since a host can't reliably cut its own power
-- **Delete file after successful print** - removes the local gcode file once it finishes printing, based on OctoPrint's own "print done" event; a print that's aborted, fails, or is interrupted by a disconnect/reset never reaches that event, so the file is left alone in every one of those cases
-- **Sidebar panel** - Enable Safe Shutdown, arm/disarm the auto-shutdown-when-cool watch, and enable delete-after-print, all directly from the main OctoPrint page - no need to open Settings
+- **Delete file after successful print** - removes the local gcode file once it finishes printing, based on OctoPrint's own "print done" event; a print that's aborted, fails, or is interrupted by a disconnect/reset never reaches that event, so the file is left alone in every one of those cases (SD-card files are left alone too - only local-storage files are deleted)
+- **Sidebar panel** - a dedicated PrintButler section below Connection/State/Files on the main OctoPrint page: arm/disarm the auto-shutdown-when-cool watch (once Safe Shutdown is enabled in Settings) and enable/disable delete-after-print, without opening Settings for either. The arm/disarm state is also shown and toggleable directly in the Safe Shutdown settings tab
 - **Live log viewer** and status panel in the settings UI
 - **Enable / disable** switch without uninstalling
 
@@ -67,7 +67,7 @@ Open OctoPrint -> Settings -> **PrintButler**.
 | **Print Finished** | Notification topic/payload on print completion, plus its own quiet hours |
 | **Finish Light** | Per-printer indicator light triggered on finish, plus its own quiet hours |
 | **Shared Light** | Cross-printer work light, peer topics, optional self-heal |
-| **Safe Shutdown** | Bed/nozzle thresholds, shutdown command, MQTT trigger topic - fires automatically once cooled down after being hot, no manual trigger |
+| **Safe Shutdown** | Bed/nozzle thresholds, shutdown command, MQTT trigger topic - fires automatically once cooled down after being hot, no manual trigger. Also shows/toggles the current arm/disarm state |
 | **File Cleanup** | Delete the local gcode file after it finishes printing successfully |
 | **Status / Log** | MQTT connection status, live values, action log |
 
