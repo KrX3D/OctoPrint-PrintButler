@@ -256,3 +256,26 @@ see the PR history for that.
   that fires on every unrelated poll (would make `>=` always-true and
   defeat the whole guard) - only bump it where the value *actually
   changes*.
+- **Even with the data layer fully correct, the checkbox still sometimes
+  didn't visibly update - confirmed by directly inspecting the request/
+  response payloads (`{"armed": true, "version": 14}` etc.) matching
+  exactly what was clicked, with a full page reload (F5) always showing
+  the right state.** That rules out a data/logic bug entirely - the
+  observable was always correct, Knockout's own `checked` binding just
+  wasn't reliably repainting the DOM from it every time, and sometimes
+  only a plain-text binding fed by the same observable (`armedTooltip`)
+  updated instead. Never fully root-caused (would need live DevTools
+  access to this specific OctoPrint/theme/browser combination to pin
+  down), but not worth chasing further when there's a direct, reliable
+  workaround: `self.armed.subscribe(...)` and
+  `self.deleteFinishedFileEnabled.subscribe(...)` now force-set
+  `checkbox.checked` via a plain `document.querySelectorAll(...)` +
+  direct property write on every change, completely bypassing Knockout's
+  reactive DOM update for this one piece of UI. A `data-printbutler-field`
+  attribute marks which checkboxes to sync, since multiple checkboxes
+  share the same observable across the sidebar and Settings dialog. Also
+  added `armedTooltip`'s dynamic text next to the Settings-tab checkbox
+  (previously only the sidebar had it) and theme-proofed the checkbox
+  appearance itself (`accent-color`, `color-scheme: light`, a `:checked`
+  outline) in case a dark/custom theme was also making checked vs.
+  unchecked hard to tell apart visually even when the DOM was right.

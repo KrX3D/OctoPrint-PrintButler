@@ -92,3 +92,35 @@
     line-height: 1;
     color: #777;
 }
+
+/* A dark/custom OctoPrint theme can restyle native checkboxes in a way
+   that leaves little to no visible contrast between their checked and
+   unchecked states (e.g. a tick rendered in a color close to the box's
+   own background) - the toggle itself was working correctly the whole
+   time (confirmed via the actual request/response payloads), it just
+   wasn't visibly obvious that it had changed. accent-color pins the
+   checked-state fill/tick to a fixed, high-contrast color regardless of
+   the active theme, for every checkbox PrintButler renders (settings
+   dialog and sidebar alike). */
+#settings_plugin_printbutler input[type="checkbox"],
+#sidebar_plugin_printbutler input[type="checkbox"] {
+    accent-color: #3c763d;
+    /* Opts out of the browser's own OS-dark-mode native form-control
+       re-theming (some browsers auto-darken checkboxes when the OS
+       prefers dark and the page hasn't declared a color-scheme), which
+       can otherwise make checked/unchecked look too similar to tell
+       apart at a glance. */
+    color-scheme: light;
+    width: 14px;
+    height: 14px;
+}
+
+/* Belt-and-suspenders in case a theme overrides accent-color too (e.g. a
+   global color-inversion filter rather than per-control styling): an
+   outline reacting to :checked is a second, independent visual signal
+   that doesn't depend on how the browser paints the tick itself. */
+#settings_plugin_printbutler input[type="checkbox"]:checked,
+#sidebar_plugin_printbutler input[type="checkbox"]:checked {
+    outline: 2px solid #3c763d;
+    outline-offset: 1px;
+}
