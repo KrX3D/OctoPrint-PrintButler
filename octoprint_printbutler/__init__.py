@@ -504,7 +504,8 @@ class PrintButlerPlugin(
             publish = self._mqtt_helpers["mqtt_publish"]
             try:
                 result = bool(publish(
-                    "printbutler/ping", "1", retained=False, qos=0, allow_queueing=False
+                    "printbutler/{}/ping".format(socket.gethostname()), "1",
+                    retained=False, qos=0, allow_queueing=False
                 ))
             except Exception:
                 result = False
