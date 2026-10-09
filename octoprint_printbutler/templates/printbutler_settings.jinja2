@@ -377,8 +377,8 @@
                 <div class="controls">
                     <input type="text" class="input-block-level"
                            data-bind="value: settings.shutdown_trigger_topic, enable: settings.shutdown_enabled"
-                           placeholder="printbutler/prusa_links/shutdown">
-                    <span class="help-inline muted">{{ _("Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely.") }}</span>
+                           placeholder="printbutler/{hostname}/shutdown">
+                    <span class="help-inline muted">{{ _("Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely. {hostname} is replaced with this host's name.") }}</span>
                 </div>
             </div>
 

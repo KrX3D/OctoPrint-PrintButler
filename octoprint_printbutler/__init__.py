@@ -7,6 +7,7 @@ from __future__ import absolute_import, unicode_literals
 import datetime
 import json
 import shlex
+import socket
 import subprocess
 import threading
 import time
@@ -545,6 +546,8 @@ class PrintButlerPlugin(
     def _mqtt_publish(self, topic, payload, qos=0, retain=False):
         if not topic:
             return False
+        if "{hostname}" in topic:
+            topic = topic.replace("{hostname}", socket.gethostname())
         if not self._mqtt_helpers or "mqtt_publish" not in self._mqtt_helpers:
             self._log("MQTT publish skipped (helper unavailable): {}".format(topic), "WARNING")
             return False
