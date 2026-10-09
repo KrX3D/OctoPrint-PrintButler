@@ -158,8 +158,8 @@ msgstr "Runs on the OctoPrint host. Needs passwordless sudo for shutdown if usin
 msgid "Trigger topic (publish)"
 msgstr "Trigger topic (publish)"
 
-msgid "Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely. {hostname} is replaced with this host's name."
-msgstr "Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely. {hostname} is replaced with this host's name."
+msgid "Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely. {hostname} is replaced with this host's name, {basetopic} with the base topic of the MQTT plugin."
+msgstr "Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely. {hostname} is replaced with this host's name, {basetopic} with the base topic of the MQTT plugin."
 
 msgid "Trigger payload (on / off)"
 msgstr "Trigger payload (on / off)"

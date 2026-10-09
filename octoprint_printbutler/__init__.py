@@ -575,6 +575,10 @@ class PrintButlerPlugin(
             return False
         if "{hostname}" in topic:
             topic = topic.replace("{hostname}", socket.gethostname())
+        if "{basetopic}" in topic:
+            # The MQTT plugin's own base topic (default "octoPrint/"), minus slashes.
+            base = (self._settings.global_get(["plugins", "mqtt", "publish", "baseTopic"]) or "").strip("/")
+            topic = topic.replace("{basetopic}", base).replace("//", "/").strip("/")
         if not self._mqtt_helpers or "mqtt_publish" not in self._mqtt_helpers:
             self._log("MQTT publish skipped (helper unavailable): {}".format(topic), "WARNING")
             return False
@@ -997,7 +1001,7 @@ class PrintButlerPlugin(
 __plugin_name__         = "PrintButler"
 __plugin_identifier__   = "printbutler"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.5.5"
+__plugin_version__      = "0.5.6"
 __plugin_description__  = (
     "Print-finished notifications, light/plug automation, and safe shutdown - "
     "all driven from OctoPrint's own state over MQTT, configurable from the "
