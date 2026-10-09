@@ -412,6 +412,17 @@
             </div>
 
             <div class="control-group">
+                <label class="control-label">{{ _("JSON payload") }}</label>
+                <div class="controls">
+                    <label class="checkbox">
+                        <input type="checkbox" data-bind="checked: settings.shutdown_trigger_json, enable: settings.shutdown_enabled">
+                        {{ _("Publish as JSON with a timestamp") }}
+                    </label>
+                    <span class="help-inline muted">{{ _("Publishes {\"state\": \"ON\", \"timestamp\": UNIX_SECONDS, \"iso\": ...} so your automation can ignore a stale or replayed message (e.g. after a Home Assistant restart) by checking the timestamp's age.") }}</span>
+                </div>
+            </div>
+
+            <div class="control-group">
                 <label class="control-label">{{ _("Settle delay (seconds)") }}</label>
                 <div class="controls">
                     <input type="number" min="0" style="width:80px;"

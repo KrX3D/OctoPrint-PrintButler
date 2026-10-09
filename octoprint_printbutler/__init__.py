@@ -139,6 +139,9 @@ class PrintButlerPlugin(
             shutdown_trigger_payload_off="OFF",
             shutdown_trigger_qos=1,
             shutdown_trigger_retain=False,
+            # Wrap the payload as JSON with a timestamp so a consumer (e.g.
+            # Home Assistant) can ignore a stale/replayed message.
+            shutdown_trigger_json=False,
             shutdown_trigger_settle_seconds=3,
 
             # Safe Shutdown fires automatically once bed/nozzle stay below
@@ -641,6 +644,13 @@ class PrintButlerPlugin(
             payload = overrides.get("payload_on") or self._settings.get(["shutdown_trigger_payload_on"]) or "ON"
         else:
             payload = overrides.get("payload_off") or self._settings.get(["shutdown_trigger_payload_off"]) or "OFF"
+        if overrides.get("json") if "json" in overrides else self._get_bool("shutdown_trigger_json"):
+            now = time.time()
+            payload = json.dumps({
+                "state": payload,
+                "timestamp": int(now),
+                "iso": datetime.datetime.fromtimestamp(now).astimezone().isoformat(timespec="seconds"),
+            })
         self._log(
             "Publishing shutdown trigger -> {} = {}{}".format(
                 topic, payload,
@@ -957,7 +967,7 @@ class PrintButlerPlugin(
 __plugin_name__         = "PrintButler"
 __plugin_identifier__   = "printbutler"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.5.3"
+__plugin_version__      = "0.5.4"
 __plugin_description__  = (
     "Print-finished notifications, light/plug automation, and safe shutdown - "
     "all driven from OctoPrint's own state over MQTT, configurable from the "

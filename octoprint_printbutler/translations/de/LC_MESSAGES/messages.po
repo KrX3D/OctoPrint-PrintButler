@@ -167,6 +167,15 @@ msgstr "Trigger-Payload (an / aus)"
 msgid "\"On\" is published right before shutdown; \"off\" is published back on the next startup, so a retained topic doesn't stay stuck \"on\" and your automation gets a clean signal the host came back up."
 msgstr "\"An\" wird direkt vor dem Herunterfahren gesendet; \"aus\" wird beim nächsten Start wieder gesendet, damit ein retained Topic nicht dauerhaft auf \"an\" hängen bleibt und deine Automatisierung ein klares Signal bekommt, dass der Host wieder hochgefahren ist."
 
+msgid "JSON payload"
+msgstr "JSON-Payload"
+
+msgid "Publish as JSON with a timestamp"
+msgstr "Als JSON mit Zeitstempel senden"
+
+msgid "Publishes {\"state\": \"ON\", \"timestamp\": UNIX_SECONDS, \"iso\": ...} so your automation can ignore a stale or replayed message (e.g. after a Home Assistant restart) by checking the timestamp's age."
+msgstr "Sendet {\"state\": \"ON\", \"timestamp\": UNIX_SEKUNDEN, \"iso\": ...}, damit deine Automation veraltete oder erneut zugestellte Nachrichten (z. B. nach einem Home-Assistant-Neustart) anhand des Zeitstempels ignorieren kann."
+
 msgid "Settle delay (seconds)"
 msgstr "Wartezeit vor dem Herunterfahren (Sekunden)"
 
