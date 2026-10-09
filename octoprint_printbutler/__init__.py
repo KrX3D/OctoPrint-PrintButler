@@ -324,9 +324,35 @@ class PrintButlerPlugin(
         try:
             self._file_manager.remove_file(origin, path)
             self._log("Deleted finished print file: {}".format(path))
+            # remove_file() leaves the file selected on the printer (OctoPrint's own
+            # delete API unselects it for the same reason); anything reading the
+            # selection afterwards (e.g. a preheat button) then hits a missing file.
+            threading.Thread(
+                target=self._unselect_when_idle, args=(origin, path),
+                name="printbutler-unselect", daemon=True,
+            ).start()
         except Exception as exc:
             self._log("Failed to delete finished print file {}: {}".format(path, exc), "ERROR")
             self._log(traceback.format_exc(), "DEBUG")
+
+    def _unselect_when_idle(self, origin, path):
+        """
+        PRINT_DONE fires while the printer is still in its FINISHING state, and
+        unselect_file() silently does nothing while busy - so wait for it to
+        settle first, then unselect only if the deleted file is still selected.
+        """
+        try:
+            for _ in range(60):
+                if not (self._printer.is_printing() or self._printer.is_paused()
+                        or self._printer.get_state_id() == "FINISHING"):
+                    break
+                time.sleep(1)
+            current = (self._printer.get_current_job() or {}).get("file") or {}
+            if current.get("origin") == origin and current.get("path") == path:
+                self._printer.unselect_file()
+                self._log("Unselected deleted file: {}".format(path))
+        except Exception as exc:
+            self._log("Could not unselect deleted file {}: {}".format(path, exc), "WARNING")
 
     # -- Finish notify / finish light ---------------------------------------
 
@@ -971,7 +997,7 @@ class PrintButlerPlugin(
 __plugin_name__         = "PrintButler"
 __plugin_identifier__   = "printbutler"
 __plugin_pythoncompat__ = ">=3.7,<4"
-__plugin_version__      = "0.5.4"
+__plugin_version__      = "0.5.5"
 __plugin_description__  = (
     "Print-finished notifications, light/plug automation, and safe shutdown - "
     "all driven from OctoPrint's own state over MQTT, configurable from the "
