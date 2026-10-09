@@ -158,14 +158,23 @@ msgstr "Runs on the OctoPrint host. Needs passwordless sudo for shutdown if usin
 msgid "Trigger topic (publish)"
 msgstr "Trigger topic (publish)"
 
-msgid "Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely."
-msgstr "Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely."
+msgid "Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely. {hostname} is replaced with this host's name."
+msgstr "Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely. {hostname} is replaced with this host's name."
 
 msgid "Trigger payload (on / off)"
 msgstr "Trigger payload (on / off)"
 
 msgid "\"On\" is published right before shutdown; \"off\" is published back on the next startup, so a retained topic doesn't stay stuck \"on\" and your automation gets a clean signal the host came back up."
 msgstr "\"On\" is published right before shutdown; \"off\" is published back on the next startup, so a retained topic doesn't stay stuck \"on\" and your automation gets a clean signal the host came back up."
+
+msgid "JSON payload"
+msgstr "JSON payload"
+
+msgid "Publish as JSON with a timestamp"
+msgstr "Publish as JSON with a timestamp"
+
+msgid "Publishes {\"state\": \"ON\", \"timestamp\": UNIX_SECONDS, \"iso\": ...} so your automation can ignore a stale or replayed message (e.g. after a Home Assistant restart) by checking the timestamp's age."
+msgstr "Publishes {\"state\": \"ON\", \"timestamp\": UNIX_SECONDS, \"iso\": ...} so your automation can ignore a stale or replayed message (e.g. after a Home Assistant restart) by checking the timestamp's age."
 
 msgid "Settle delay (seconds)"
 msgstr "Settle delay (seconds)"

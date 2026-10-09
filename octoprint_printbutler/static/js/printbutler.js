@@ -362,7 +362,8 @@ $(function () {
                 topic: self.settings.shutdown_trigger_topic(),
                 payload_on: self.settings.shutdown_trigger_payload_on(),
                 qos: parseInt(self.settings.shutdown_trigger_qos(), 10) || 0,
-                retain: self.settings.shutdown_trigger_retain() === true
+                retain: self.settings.shutdown_trigger_retain() === true,
+                json: self.settings.shutdown_trigger_json() === true
             });
         };
 
