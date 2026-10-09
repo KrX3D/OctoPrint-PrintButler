@@ -158,8 +158,8 @@ msgstr "Wird auf dem OctoPrint-Host ausgeführt. Benötigt passwortloses sudo f�
 msgid "Trigger topic (publish)"
 msgstr "Trigger-Topic (senden)"
 
-msgid "Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely. {hostname} is replaced with this host's name."
-msgstr "Wird direkt vor dem Shutdown-Befehl gesendet. Richte eine Home-Assistant-Automatisierung auf dieses Topic aus, um die Stromversorgung sicher zu trennen. {hostname} wird durch den Hostnamen dieses Rechners ersetzt."
+msgid "Published right before the shutdown command runs. Point a Home Assistant automation at this topic to cut mains power safely. {hostname} is replaced with this host's name, {basetopic} with the base topic of the MQTT plugin."
+msgstr "Wird direkt vor dem Shutdown-Befehl gesendet. Richte eine Home-Assistant-Automatisierung auf dieses Topic aus, um die Stromversorgung sicher zu trennen. {hostname} wird durch den Hostnamen dieses Rechners ersetzt, {basetopic} durch das Base-Topic des MQTT-Plugins."
 
 msgid "Trigger payload (on / off)"
 msgstr "Trigger-Payload (an / aus)"
