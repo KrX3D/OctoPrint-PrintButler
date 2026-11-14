@@ -40,22 +40,6 @@ $(function () {
         self._armedVersion              = -1;
         self._deleteFinishedFileVersion = -1;
 
-        // Belt-and-suspenders: force the checkbox DOM nodes to match the
-        // observable directly, bypassing Knockout's own checked binding
-        // entirely for the actual repaint. Querying and setting .checked
-        // directly can't have any binding-context/reactivity ambiguity -
-        // it's a plain DOM write run every time the observable's value
-        // actually changes, regardless of what caused that change.
-        self._syncCheckboxDom = function (fieldName, value) {
-            document
-                .querySelectorAll('input[type="checkbox"][data-printbutler-field="' + fieldName + '"]')
-                .forEach(function (el) {
-                    if (el.checked !== value) { el.checked = value; }
-                });
-        };
-        self.armed.subscribe(function (value) { self._syncCheckboxDom("armed", value); });
-        self.deleteFinishedFileEnabled.subscribe(function (value) { self._syncCheckboxDom("delete-finished-file", value); });
-
         // Programmatic updates (poll, push message, a toggle's own success
         // response) go through these, NOT straight through self.armed(...)
         // / self.deleteFinishedFileEnabled(...) - the _xSyncing flag tells
@@ -258,12 +242,16 @@ $(function () {
         // "the user just checked/unchecked this box" from "we just set this
         // to reflect the server's own state" - without it, every poll/push
         // update would loop right back into sending another API request.
-        // Guarded by armedBusy too, and the template disables the checkbox
-        // itself while busy (`enable: !armedBusy()`) so a disabled checkbox
-        // can't fire a change at all - belt and suspenders against the
-        // request pile-up seen before this was added.
+        // armedBusy only disables the checkbox while its request is in
+        // flight (`enable: !armedBusy()` in both templates), so a fast second
+        // click can't start an overlapping request whose .fail() would then
+        // roll back to the wrong value. It is not a de-duplication guard any
+        // more: the old "burst of identical requests per click" came from the
+        // checked+click combination (KO's click binding preventDefault()s,
+        // the browser reverted the box, the user clicked again), see
+        // LEARNINGS.md.
         self.armed.subscribe(function (value) {
-            if (self._armedSyncing || self.armedBusy()) { return; }
+            if (self._armedSyncing) { return; }
             self.armedBusy(true);
             OctoPrint.simpleApiCommand("printbutler", "set_armed", {armed: value})
                 .done(function (data) {
@@ -289,7 +277,7 @@ $(function () {
         // observable, explicitly persisted server-side, is the same
         // approach that already works correctly for armed.
         self.deleteFinishedFileEnabled.subscribe(function (value) {
-            if (self._deleteFinishedFileSyncing || self.deleteFinishedFileBusy()) { return; }
+            if (self._deleteFinishedFileSyncing) { return; }
             self.deleteFinishedFileBusy(true);
             OctoPrint.simpleApiCommand("printbutler", "set_delete_finished_file_enabled", {enabled: value})
                 .done(function (data) {
