@@ -197,19 +197,26 @@ see the PR history for that.
   sidebar) hit it immediately, looking like "the checkbox can't be
   unchecked." Pass `force=True` on a settings write you want stored
   unconditionally regardless of the default.
-- **Any sidebar/navbar control that fires an API command on click needs a
-  busyObservable guard, the same way the settings-page Test buttons already
-  had one.** Without it, the PrintButler log showed a single intended click
-  producing a *burst* of several identical `set_armed`/
-  `set_delete_finished_file_enabled` calls in a row - whatever the deeper
-  cause (this wasn't fully root-caused), the effect was a pile of pending
-  requests that made the whole OctoPrint page feel frozen (unrelated
-  buttons like Connect included) while they were all in flight. A
-  `busyObservable` checked at the top of the handler, set for the duration
-  of the request, and bound to the checkbox's own `enable` in the template
-  closes this off unconditionally: a control that's disabled while a
-  request is in flight physically cannot fire a second one, regardless of
-  what would otherwise have triggered the repeat.
+- **The "burst of identical requests per click" was `checked` + `click` on
+  the same checkbox, not a mystery.** Knockout's `click` binding calls
+  `preventDefault()` unless the handler returns `true`. On a checkbox that
+  makes the browser undo the toggle once the event has finished. The
+  `checked` binding had already written the new value into the observable
+  and the click handler had already sent `set_armed`, but the box itself
+  snapped back to the old state. The user saw "nothing happened" and
+  clicked again, which sent the *same* value again: several identical
+  `set_armed`/`set_delete_finished_file_enabled` calls in a row, not an
+  alternating sequence. Reproduced in headless Chromium with Knockout
+  3.5.1: three clicks gave `requests=[false,false,false]` with the DOM still
+  checked and `armed()` already `false`. The same mismatch (observable
+  right, DOM wrong) is the "Knockout isn't repainting" symptom below, and
+  `armedTooltip` updating while the box didn't is exactly what it predicts.
+  Fixed for good by binding `checked` only and sending from a
+  `subscribe()` (see further down). The busy observables are now only an
+  in-flight lock via `enable:` (so overlapping requests can't make a
+  `.fail()` roll back to the wrong value); the extra busy check inside the
+  subscribe handler and the `_syncCheckboxDom` DOM-forcing workaround were
+  removed in 0.5.8.
 - **A periodic status poll racing a user-triggered toggle can silently undo
   it** - and did: after the busyObservable fix above, the actual remaining
   bug turned out to be `refreshStatus()`'s 5-second `setInterval` poll,
@@ -256,7 +263,9 @@ see the PR history for that.
   that fires on every unrelated poll (would make `>=` always-true and
   defeat the whole guard) - only bump it where the value *actually
   changes*.
-- **Even with the data layer fully correct, the checkbox still sometimes
+- **(Superseded - root cause was the `checked`+`click` preventDefault, see
+  the burst entry above; the workaround below was removed in 0.5.8.) Even
+  with the data layer fully correct, the checkbox still sometimes
   didn't visibly update - confirmed by directly inspecting the request/
   response payloads (`{"armed": true, "version": 14}` etc.) matching
   exactly what was clicked, with a full page reload (F5) always showing
